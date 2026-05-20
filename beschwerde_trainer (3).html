@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beschwerde Trainer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0e0e0f;--surface:#161618;--card:#1e1e21;--border:#2a2a2e;
+  --accent:#c9a84c;--accent2:#7b6cd4;--correct:#4caf7d;--wrong:#e05252;
+  --text:#e8e6df;--muted:#7a7870;--tag:#252528;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+header{border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;background:var(--surface);position:sticky;top:0;z-index:100;}
+header h1{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--accent);}
+.header-sub{font-size:0.68rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;}
+#stats-bar{display:flex;gap:16px;font-family:'IBM Plex Mono',monospace;font-size:.75rem;}
+.stat{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.stat-val{color:var(--accent);font-size:1rem;font-weight:500;}
+.stat-lbl{color:var(--muted);font-size:.62rem;letter-spacing:.1em;}
+main{display:flex;flex:1;}
+#sidebar{width:252px;min-width:252px;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:12px 0;}
+.sidebar-group{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;padding:10px 18px 4px;}
+.sidebar-btn{display:flex;align-items:center;width:100%;padding:8px 18px;background:none;border:none;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:.76rem;cursor:pointer;text-align:left;gap:8px;transition:background .15s;opacity:.82;}
+.sidebar-btn:hover{background:var(--card);opacity:1;}
+.sidebar-btn.active{background:var(--card);border-left:2px solid var(--accent);color:var(--accent);opacity:1;}
+.sidebar-btn .num{font-family:'IBM Plex Mono',monospace;font-size:.65rem;color:var(--muted);min-width:20px;}
+.sidebar-btn.active .num{color:var(--accent);}
+#content{flex:1;padding:28px 36px;overflow-y:auto;}
+#mode-bar{display:flex;gap:7px;margin-bottom:24px;flex-wrap:wrap;}
+.mode-btn{padding:6px 14px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.05em;cursor:pointer;transition:all .15s;border-radius:2px;}
+.mode-btn:hover{border-color:var(--accent);color:var(--text);}
+.mode-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:500;}
+.section-header{margin-bottom:20px;}
+.section-pattern{font-family:'IBM Plex Mono',monospace;font-size:.85rem;color:var(--accent);background:var(--tag);display:inline-block;padding:3px 10px;border-radius:2px;margin-bottom:4px;}
+.section-title{font-family:'Playfair Display',serif;font-size:1.35rem;margin-bottom:4px;}
+.section-desc{color:var(--muted);font-size:.78rem;}
+.prog-bar-wrap{background:var(--border);border-radius:1px;height:3px;margin-bottom:16px;}
+.prog-bar{background:var(--accent);height:3px;border-radius:1px;transition:width .3s;}
+.toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.toggle-label{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--muted);letter-spacing:.06em;}
+.toggle{width:34px;height:17px;background:var(--border);border-radius:9px;cursor:pointer;position:relative;transition:background .2s;border:none;}
+.toggle::after{content:'';position:absolute;width:11px;height:11px;background:var(--muted);border-radius:50%;top:3px;left:3px;transition:all .2s;}
+.toggle.on{background:var(--accent);}
+.toggle.on::after{left:20px;background:var(--bg);}
+/* LIST */
+.sentence-list{display:flex;flex-direction:column;gap:2px;}
+.sentence-row{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:12px 16px;display:grid;grid-template-columns:26px 1fr 1fr;gap:10px;align-items:start;transition:background .15s;}
+.sentence-row:hover{background:#212124;}
+.row-num{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--muted);padding-top:2px;}
+.row-de{font-size:.86rem;line-height:1.55;}
+.row-tr{font-size:.8rem;color:var(--muted);line-height:1.55;}
+.hl{color:var(--accent);font-weight:500;}
+/* CARDS */
+.flashcard{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:32px 28px;cursor:pointer;min-height:150px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;user-select:none;position:relative;transition:border-color .2s;margin-bottom:16px;}
+.flashcard:hover{border-color:var(--accent);}
+.flashcard.flipped{border-color:var(--accent2);}
+.card-front{font-size:1.05rem;line-height:1.7;}
+.card-back{display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--border);width:100%;}
+.flashcard.flipped .card-back{display:block;}
+.card-back-de{font-size:.95rem;color:var(--accent);font-family:'IBM Plex Mono',monospace;margin-bottom:5px;}
+.flip-hint{position:absolute;bottom:9px;right:12px;font-size:.62rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+.card-nav{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:8px;}
+.nav-btn{background:var(--card);border:1px solid var(--border);color:var(--text);padding:7px 18px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.72rem;transition:all .15s;border-radius:2px;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.card-progress{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted);min-width:66px;text-align:center;}
+/* BLANK */
+.exercise-card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:24px;margin-bottom:14px;}
+.ex-label{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
+.ex-sentence{font-size:.96rem;line-height:2;margin-bottom:12px;}
+.blank-input{background:var(--bg);border:1px solid var(--border);border-bottom:2px solid var(--accent2);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:.86rem;padding:3px 7px;outline:none;min-width:120px;transition:border-color .2s;border-radius:2px 2px 0 0;}
+.blank-input:focus{border-bottom-color:var(--accent);}
+.blank-input.correct{border-bottom-color:var(--correct);background:#1a2e22;}
+.blank-input.wrong{border-bottom-color:var(--wrong);background:#2e1a1a;}
+.ex-hint{font-size:.76rem;color:var(--muted);margin-bottom:12px;}
+.ex-hint span{color:var(--accent);font-family:'IBM Plex Mono',monospace;}
+.ex-controls{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+.check-btn{background:var(--accent);color:var(--bg);border:none;padding:8px 20px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.07em;cursor:pointer;border-radius:2px;font-weight:500;}
+.check-btn:hover{opacity:.85;}
+.show-answer-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:7px 14px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;cursor:pointer;border-radius:2px;transition:all .15s;}
+.show-answer-btn:hover{border-color:var(--muted);color:var(--text);}
+.feedback{margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;padding:7px 11px;border-radius:2px;display:none;}
+.feedback.show{display:block;}
+.feedback.ok{background:#1a2e22;color:var(--correct);border-left:3px solid var(--correct);}
+.feedback.err{background:#2e1a1a;color:var(--wrong);border-left:3px solid var(--wrong);}
+.full-answer{display:none;background:var(--bg);border-left:3px solid var(--correct);padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:.82rem;color:var(--correct);margin-top:8px;border-radius:0 2px 2px 0;}
+/* TRANSLATE */
+.translate-card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:26px;margin-bottom:14px;}
+.tr-prompt{font-size:.72rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
+.tr-sentence{font-size:1.02rem;color:var(--accent);margin-bottom:16px;line-height:1.6;}
+.tr-input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:.88rem;padding:9px 12px;outline:none;resize:vertical;min-height:66px;border-radius:2px;transition:border-color .2s;margin-bottom:10px;}
+.tr-input:focus{border-color:var(--accent2);}
+.tr-answer{display:none;background:var(--bg);border-left:3px solid var(--correct);padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:.82rem;color:var(--correct);margin-top:8px;border-radius:0 2px 2px 0;}
+.tr-answer.show{display:block;}
+/* QUIZ */
+.quiz-card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:26px;margin-bottom:14px;}
+.quiz-q{font-size:.98rem;line-height:1.65;margin-bottom:18px;}
+.quiz-options{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.quiz-opt{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 13px;text-align:left;font-family:'IBM Plex Sans',sans-serif;font-size:.8rem;cursor:pointer;border-radius:2px;transition:all .15s;line-height:1.4;}
+.quiz-opt:hover:not(:disabled){border-color:var(--accent2);}
+.quiz-opt.correct-opt{background:#1a2e22;border-color:var(--correct);color:var(--correct);}
+.quiz-opt.wrong-opt{background:#2e1a1a;border-color:var(--wrong);color:var(--wrong);}
+.quiz-opt:disabled{cursor:default;}
+.quiz-next{margin-top:14px;display:none;}
+.quiz-next.show{display:block;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+@media(max-width:700px){#sidebar{display:none;}#content{padding:16px 14px;}.quiz-options{grid-template-columns:1fr;}.sentence-row{grid-template-columns:22px 1fr;}.row-tr{grid-column:2;}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Beschwerde Trainer</h1>
+    <div class="header-sub">SCHREIBEN · B2–C1 · DEUTSCH–TÜRKÇE</div>
+  </div>
+  <div id="stats-bar">
+    <div class="stat"><span class="stat-val" id="s-correct">0</span><span class="stat-lbl">DOĞRU</span></div>
+    <div class="stat"><span class="stat-val" id="s-wrong">0</span><span class="stat-lbl">YANLIŞ</span></div>
+    <div class="stat"><span class="stat-val" id="s-total">0</span><span class="stat-lbl">TOPLAM</span></div>
+  </div>
+</header>
+<main>
+  <nav id="sidebar"></nav>
+  <section id="content">
+    <div id="mode-bar">
+      <button class="mode-btn active" onclick="setMode('list',this)">📋 Liste</button>
+      <button class="mode-btn" onclick="setMode('cards',this)">🃏 Kartlar</button>
+      <button class="mode-btn" onclick="setMode('blank',this)">✏️ Boşluk Doldur</button>
+      <button class="mode-btn" onclick="setMode('translate',this)">🔄 Türkçe→Almanca</button>
+      <button class="mode-btn" onclick="setMode('quiz',this)">🎯 Quiz</button>
+    </div>
+    <div id="exercise-area"></div>
+  </section>
+</main>
+<script>
+const sections=[
+{id:1,title:"Ich möchte mich über … beschweren.",pattern:"Ich möchte mich über [KONU] beschweren.",desc:"Şikâyet konusunu belirtme — temel kalıp",sentences:[
+["Ich möchte mich über die verspätete Lieferung beschweren.","Geç teslimat hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über den schlechten Kundenservice beschweren.","Kötü müşteri hizmeti hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die hohe Rechnung beschweren.","Yüksek fatura hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die schlechte Internetverbindung beschweren.","Kötü internet bağlantısı hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über das kaputte Produkt beschweren.","Bozuk ürün hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über den Lärm im Hotel beschweren.","Oteldeki gürültü hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die unfreundlichen Mitarbeiter beschweren.","Kaba çalışanlar hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die falsche Bestellung beschweren.","Yanlış sipariş hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die schlechte Organisation beschweren.","Kötü organizasyon hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die ständigen Verspätungen beschweren.","Sürekli gecikmeler hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die mangelnde Sauberkeit beschweren.","Yetersiz temizlik hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die defekte Heizung beschweren.","Bozuk kalorifer hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über den schlechten Zustand des Zimmers beschweren.","Odanın kötü durumu hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die fehlerhafte Rechnung beschweren.","Hatalı fatura hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die lange Wartezeit beschweren.","Uzun bekleme süresi hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die schlechte Qualität beschweren.","Kötü kalite hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über den beschädigten Koffer beschweren.","Hasarlı bavul hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die fehlende Rückmeldung beschweren.","Geri dönüş olmaması hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die unzureichende Betreuung beschweren.","Yetersiz ilgilenme hakkında şikâyette bulunmak istiyorum."],
+["Ich möchte mich über die unerwarteten Zusatzkosten beschweren.","Beklenmeyen ek masraflar hakkında şikâyette bulunmak istiyorum."],
+]},
+{id:2,title:"Das Problem besteht darin, dass …",pattern:"Das Problem besteht darin, dass [CÜMLE].",desc:"Problemi tanımlama kalıbı",sentences:[
+["Das Problem besteht darin, dass die Lieferung zu spät angekommen ist.","Problem teslimatın geç gelmiş olmasıdır."],
+["Das Problem besteht darin, dass das Gerät nicht funktioniert.","Problem cihazın çalışmamasıdır."],
+["Das Problem besteht darin, dass niemand erreichbar war.","Problem kimseye ulaşılamamasıdır."],
+["Das Problem besteht darin, dass das Zimmer sehr schmutzig war.","Problem odanın çok kirli olmasıdır."],
+["Das Problem besteht darin, dass meine Bestellung verloren gegangen ist.","Problem siparişimin kaybolmuş olmasıdır."],
+["Das Problem besteht darin, dass die Rechnung falsch ist.","Problem faturanın yanlış olmasıdır."],
+["Das Problem besteht darin, dass die Heizung nicht funktioniert hat.","Problem kaloriferin çalışmamış olmasıdır."],
+["Das Problem besteht darin, dass der Kurs plötzlich abgesagt wurde.","Problem kursun aniden iptal edilmiş olmasıdır."],
+["Das Problem besteht darin, dass ich keine Antwort erhalten habe.","Problem cevap almamış olmamdır."],
+["Das Problem besteht darin, dass die Mitarbeiter unhöflich waren.","Problem çalışanların kaba olmasıdır."],
+["Das Problem besteht darin, dass die Qualität sehr schlecht war.","Problem kalitenin çok kötü olmasıdır."],
+["Das Problem besteht darin, dass das Essen kalt serviert wurde.","Problem yemeğin soğuk servis edilmiş olmasıdır."],
+["Das Problem besteht darin, dass der Zug ausgefallen ist.","Problem trenin iptal edilmiş olmasıdır."],
+["Das Problem besteht darin, dass der Preis plötzlich erhöht wurde.","Problem fiyatın aniden artırılmış olmasıdır."],
+["Das Problem besteht darin, dass das WLAN nicht stabil war.","Problem Wi-Fi'nin stabil olmamasıdır."],
+["Das Problem besteht darin, dass die Informationen unklar waren.","Problem bilgilerin belirsiz olmasıdır."],
+["Das Problem besteht darin, dass mein Paket beschädigt angekommen ist.","Problem paketimin hasarlı gelmiş olmasıdır."],
+["Das Problem besteht darin, dass der Termin verschoben wurde.","Problem randevunun ertelenmiş olmasıdır."],
+["Das Problem besteht darin, dass die Klimaanlage kaputt war.","Problem klimanın bozuk olmasıdır."],
+["Das Problem besteht darin, dass ich zusätzliche Gebühren zahlen musste.","Problem ek ücret ödemek zorunda kalmış olmamdır."],
+]},
+{id:3,title:"Ich bitte Sie daher, …",pattern:"Ich bitte Sie daher, [İSTEK].",desc:"Rica / talep kalıbı — nazik",sentences:[
+["Ich bitte Sie daher, mir das Geld zurückzuerstatten.","Bu nedenle parayı bana geri ödemenizi rica ediyorum."],
+["Ich bitte Sie daher, das Problem schnell zu lösen.","Bu nedenle problemi hızlıca çözmenizi rica ediyorum."],
+["Ich bitte Sie daher, mir einen Ersatz zu schicken.","Bu nedenle bana yenisini göndermenizi rica ediyorum."],
+["Ich bitte Sie daher, die Rechnung zu korrigieren.","Bu nedenle faturayı düzeltmenizi rica ediyorum."],
+["Ich bitte Sie daher, mir schriftlich zu antworten.","Bu nedenle bana yazılı cevap vermenizi rica ediyorum."],
+["Ich bitte Sie daher, die Lieferung erneut zu senden.","Bu nedenle teslimatı yeniden göndermenizi rica ediyorum."],
+["Ich bitte Sie daher, die Kosten zu übernehmen.","Bu nedenle masrafları karşılamanızı rica ediyorum."],
+["Ich bitte Sie daher, den Schaden zu beheben.","Bu nedenle hasarı gidermenizi rica ediyorum."],
+["Ich bitte Sie daher, den Betrag zurückzuzahlen.","Bu nedenle tutarı geri ödemenizi rica ediyorum."],
+["Ich bitte Sie daher, mir eine Erklärung zu geben.","Bu nedenle bana bir açıklama vermenizi rica ediyorum."],
+["Ich bitte Sie daher, den Vertrag zu kündigen.","Bu nedenle sözleşmeyi feshetmenizi rica ediyorum."],
+["Ich bitte Sie daher, die Qualität zu verbessern.","Bu nedenle kaliteyi iyileştirmenizi rica ediyorum."],
+["Ich bitte Sie daher, mir schnellstmöglich zu antworten.","Bu nedenle bana mümkün olan en kısa sürede cevap vermenizi rica ediyorum."],
+["Ich bitte Sie daher, einen Techniker zu schicken.","Bu nedenle bir teknisyen göndermenizi rica ediyorum."],
+["Ich bitte Sie daher, die zusätzlichen Kosten zu erstatten.","Bu nedenle ek masrafları geri ödemenizi rica ediyorum."],
+["Ich bitte Sie daher, den Fehler zu korrigieren.","Bu nedenle hatayı düzeltmenizi rica ediyorum."],
+["Ich bitte Sie daher, meine Bestellung zu überprüfen.","Bu nedenle siparişimi kontrol etmenizi rica ediyorum."],
+["Ich bitte Sie daher, mir eine Entschädigung anzubieten.","Bu nedenle bana bir tazminat teklif etmenizi rica ediyorum."],
+["Ich bitte Sie daher, den Termin zu bestätigen.","Bu nedenle randevuyu onaylamanızı rica ediyorum."],
+["Ich bitte Sie daher, die Situation ernst zu nehmen.","Bu nedenle durumu ciddiye almanızı rica ediyorum."],
+]},
+{id:4,title:"Ich wende mich an Sie, weil …",pattern:"Ich wende mich an Sie, weil [SEBEP].",desc:"Başvuru sebebini açıklama kalıbı",sentences:[
+["Ich wende mich an Sie, weil ich mich über die verspätete Lieferung beschweren möchte.","Size başvuruyorum, çünkü geç teslimat hakkında şikâyet etmek istiyorum."],
+["Ich wende mich an Sie, weil meine Bestellung beschädigt angekommen ist.","Size başvuruyorum, çünkü siparişim hasarlı geldi."],
+["Ich wende mich an Sie, weil ich mit Ihrem Service nicht zufrieden bin.","Size başvuruyorum, çünkü hizmetinizden memnun değilim."],
+["Ich wende mich an Sie, weil die Rechnung meiner Meinung nach falsch ist.","Size başvuruyorum, çünkü bana göre fatura yanlış."],
+["Ich wende mich an Sie, weil mein Paket bis heute nicht angekommen ist.","Size başvuruyorum, çünkü paketim bugüne kadar gelmedi."],
+["Ich wende mich an Sie, weil der gebuchte Kurs plötzlich abgesagt wurde.","Size başvuruyorum, çünkü rezerve edilen kurs aniden iptal edildi."],
+["Ich wende mich an Sie, weil das Hotelzimmer nicht der Beschreibung entsprach.","Size başvuruyorum, çünkü otel odası açıklamaya uygun değildi."],
+["Ich wende mich an Sie, weil die Internetverbindung seit Tagen nicht funktioniert.","Size başvuruyorum, çünkü internet bağlantısı günlerdir çalışmıyor."],
+["Ich wende mich an Sie, weil ich trotz mehrmaliger Nachfrage keine Antwort erhalten habe.","Size başvuruyorum, çünkü defalarca sormama rağmen cevap alamadım."],
+["Ich wende mich an Sie, weil mir zusätzliche Kosten entstanden sind.","Size başvuruyorum, çünkü bana ek masraflar çıktı."],
+["Ich wende mich an Sie, weil die zugesagte Leistung nicht erbracht wurde.","Size başvuruyorum, çünkü söz verilen hizmet yerine getirilmedi."],
+["Ich wende mich an Sie, weil der Kundenservice unfreundlich und wenig hilfreich war.","Size başvuruyorum, çünkü müşteri hizmeti kaba ve pek yardımcı değildi."],
+["Ich wende mich an Sie, weil die Ware nicht vollständig geliefert wurde.","Size başvuruyorum, çünkü ürün eksiksiz teslim edilmedi."],
+["Ich wende mich an Sie, weil ich eine schriftliche Klärung benötige.","Size başvuruyorum, çünkü yazılı bir açıklamaya ihtiyacım var."],
+["Ich wende mich an Sie, weil der Mangel bis heute nicht behoben wurde.","Size başvuruyorum, çünkü kusur bugüne kadar giderilmedi."],
+["Ich wende mich an Sie, weil ich den gezahlten Betrag zurückverlangen möchte.","Size başvuruyorum, çünkü ödediğim tutarı geri istemek istiyorum."],
+["Ich wende mich an Sie, weil die Qualität des Produkts sehr enttäuschend war.","Size başvuruyorum, çünkü ürünün kalitesi çok hayal kırıklığı yaratıcıydı."],
+["Ich wende mich an Sie, weil der Termin ohne rechtzeitige Information verschoben wurde.","Size başvuruyorum, çünkü randevu zamanında bilgi verilmeden ertelendi."],
+["Ich wende mich an Sie, weil ich eine faire Lösung erwarte.","Size başvuruyorum, çünkü adil bir çözüm bekliyorum."],
+["Ich wende mich an Sie, weil ich diese Situation nicht akzeptieren kann.","Size başvuruyorum, çünkü bu durumu kabul edemem."],
+]},
+{id:5,title:"Hiermit möchte ich mich über … beschweren.",pattern:"Hiermit möchte ich mich über [KONU] beschweren.",desc:"Resmi yazı başlangıcı — hiermit",sentences:[
+["Hiermit möchte ich mich über die mangelhafte Qualität beschweren.","Bu yazıyla yetersiz kalite hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die verspätete Lieferung beschweren.","Bu yazıyla geç teslimat hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über den schlechten Kundenservice beschweren.","Bu yazıyla kötü müşteri hizmeti hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die fehlerhafte Rechnung beschweren.","Bu yazıyla hatalı fatura hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über das beschädigte Produkt beschweren.","Bu yazıyla hasarlı ürün hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die falsche Lieferung beschweren.","Bu yazıyla yanlış teslimat hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die schlechte Organisation beschweren.","Bu yazıyla kötü organizasyon hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die mangelnde Sauberkeit beschweren.","Bu yazıyla yetersiz temizlik hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die unfreundliche Behandlung beschweren.","Bu yazıyla kaba muamele hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die unerwarteten Zusatzkosten beschweren.","Bu yazıyla beklenmeyen ek masraflar hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die schlechte Beratung beschweren.","Bu yazıyla kötü danışmanlık hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über den ausgefallenen Termin beschweren.","Bu yazıyla iptal edilen randevu hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die falschen Informationen beschweren.","Bu yazıyla yanlış bilgiler hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die lange Wartezeit beschweren.","Bu yazıyla uzun bekleme süresi hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über den schlechten Zustand des Zimmers beschweren.","Bu yazıyla odanın kötü durumu hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die defekte Heizung beschweren.","Bu yazıyla bozuk kalorifer hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die instabile Internetverbindung beschweren.","Bu yazıyla istikrarsız internet bağlantısı hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die fehlende Rückmeldung beschweren.","Bu yazıyla geri dönüş yapılmaması hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die unvollständige Lieferung beschweren.","Bu yazıyla eksik teslimat hakkında şikâyette bulunmak istiyorum."],
+["Hiermit möchte ich mich über die nicht eingehaltene Zusage beschweren.","Bu yazıyla tutulmayan söz hakkında şikâyette bulunmak istiyorum."],
+]},
+{id:6,title:"Ich schreibe Ihnen bezüglich …",pattern:"Ich schreibe Ihnen bezüglich [KONU].",desc:"Konu belirtme — bezüglich",sentences:[
+["Ich schreibe Ihnen bezüglich meiner Bestellung vom 12. Mai.","Size 12 Mayıs tarihli siparişimle ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der fehlerhaften Rechnung.","Size hatalı faturayla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der verspäteten Lieferung.","Size geç teslimatla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich meines beschädigten Pakets.","Size hasarlı paketimle ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der schlechten Internetverbindung.","Size kötü internet bağlantısıyla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der abgesagten Veranstaltung.","Size iptal edilen etkinlikle ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich meiner Hotelbuchung.","Size otel rezervasyonumla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der mangelnden Sauberkeit im Zimmer.","Size odadaki yetersiz temizlikle ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der zusätzlichen Kosten.","Size ek masraflarla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich des schlechten Kundenservices.","Size kötü müşteri hizmetiyle ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der nicht erbrachten Leistung.","Size yerine getirilmeyen hizmetle ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich meiner Reklamation.","Size reklamasyonumla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der falschen Lieferung.","Size yanlış teslimatla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der defekten Ware.","Size bozuk ürünle ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der langen Wartezeit.","Size uzun bekleme süresiyle ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der unklaren Vertragsbedingungen.","Size belirsiz sözleşme şartlarıyla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der fehlenden Rückerstattung.","Size yapılmayan para iadesiyle ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der unfreundlichen Beratung.","Size kaba danışmanlıkla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der verspäteten Antwort.","Size geciken cevapla ilgili yazıyorum."],
+["Ich schreibe Ihnen bezüglich der dringend notwendigen Klärung.","Size acilen gerekli açıklamayla ilgili yazıyorum."],
+]},
+{id:7,title:"Leider bin ich mit … nicht zufrieden.",pattern:"Leider bin ich mit [KONU] nicht zufrieden.",desc:"Memnuniyetsizlik ifadesi",sentences:[
+["Leider bin ich mit Ihrem Service nicht zufrieden.","Ne yazık ki hizmetinizden memnun değilim."],
+["Leider bin ich mit der Qualität des Produkts nicht zufrieden.","Ne yazık ki ürünün kalitesinden memnun değilim."],
+["Leider bin ich mit der Lieferung nicht zufrieden.","Ne yazık ki teslimattan memnun değilim."],
+["Leider bin ich mit der Beratung nicht zufrieden.","Ne yazık ki danışmanlıktan memnun değilim."],
+["Leider bin ich mit der Bearbeitung meiner Anfrage nicht zufrieden.","Ne yazık ki talebimin işlenmesinden memnun değilim."],
+["Leider bin ich mit der Sauberkeit des Zimmers nicht zufrieden.","Ne yazık ki odanın temizliğinden memnun değilim."],
+["Leider bin ich mit der Organisation des Kurses nicht zufrieden.","Ne yazık ki kursun organizasyonundan memnun değilim."],
+["Leider bin ich mit der Reaktion Ihres Unternehmens nicht zufrieden.","Ne yazık ki şirketinizin tepkisinden memnun değilim."],
+["Leider bin ich mit der Geschwindigkeit der Bearbeitung nicht zufrieden.","Ne yazık ki işlemin hızından memnun değilim."],
+["Leider bin ich mit der Lösung, die mir angeboten wurde, nicht zufrieden.","Ne yazık ki bana sunulan çözümden memnun değilim."],
+["Leider bin ich mit dem Zustand der Ware nicht zufrieden.","Ne yazık ki ürünün durumundan memnun değilim."],
+["Leider bin ich mit der Freundlichkeit Ihrer Mitarbeiter nicht zufrieden.","Ne yazık ki çalışanlarınızın nezaketinden memnun değilim."],
+["Leider bin ich mit der telefonischen Auskunft nicht zufrieden.","Ne yazık ki telefonda verilen bilgiden memnun değilim."],
+["Leider bin ich mit der Kommunikation nicht zufrieden.","Ne yazık ki iletişimden memnun değilim."],
+["Leider bin ich mit dem Preis-Leistungs-Verhältnis nicht zufrieden.","Ne yazık ki fiyat-performans oranından memnun değilim."],
+["Leider bin ich mit der technischen Unterstützung nicht zufrieden.","Ne yazık ki teknik destekten memnun değilim."],
+["Leider bin ich mit der Rückmeldung nicht zufrieden.","Ne yazık ki verilen cevaptan memnun değilim."],
+["Leider bin ich mit der Abwicklung meiner Reklamation nicht zufrieden.","Ne yazık ki reklamasyonumun yürütülmesinden memnun değilim."],
+["Leider bin ich mit der Zuverlässigkeit Ihres Dienstes nicht zufrieden.","Ne yazık ki hizmetinizin güvenilirliğinden memnun değilim."],
+["Leider bin ich mit dem gesamten Ablauf nicht zufrieden.","Ne yazık ki tüm süreçten memnun değilim."],
+]},
+{id:8,title:"Obwohl …, wurde …",pattern:"Obwohl [KOŞUL], wurde [SONUÇ].",desc:"Zıtlık — rağmen yapısı",sentences:[
+["Obwohl ich rechtzeitig bestellt habe, wurde die Lieferung verspätet zugestellt.","Zamanında sipariş vermeme rağmen teslimat geç ulaştırıldı."],
+["Obwohl ich mehrmals angerufen habe, wurde das Problem nicht gelöst.","Defalarca aramama rağmen problem çözülmedi."],
+["Obwohl das Gerät noch neu war, wurde es schnell defekt.","Cihaz hâlâ yeni olmasına rağmen hızlıca bozuldu."],
+["Obwohl ich eine Bestätigung erhalten hatte, wurde meine Reservierung storniert.","Onay almış olmama rağmen rezervasyonum iptal edildi."],
+["Obwohl ich den Kundenservice informiert habe, wurde nichts unternommen.","Müşteri hizmetlerini bilgilendirmeme rağmen hiçbir şey yapılmadı."],
+["Obwohl das Hotel vier Sterne hat, wurde das Zimmer nicht gereinigt.","Otel dört yıldızlı olmasına rağmen oda temizlenmedi."],
+["Obwohl ich extra bezahlt habe, wurde die Ware beschädigt geliefert.","Ekstra ödeme yapmama rağmen ürün hasarlı teslim edildi."],
+["Obwohl der Termin vereinbart war, wurde ich lange warten gelassen.","Randevu ayarlanmış olmasına rağmen uzun süre bekletildim."],
+["Obwohl Sie eine schnelle Bearbeitung versprochen haben, wurde mein Anliegen ignoriert.","Hızlı işlem sözü vermenize rağmen talebim görmezden gelindi."],
+["Obwohl ich alle Unterlagen geschickt habe, wurde mein Antrag abgelehnt.","Tüm belgeleri göndermeme rağmen başvurum reddedildi."],
+["Obwohl die Reparatur angekündigt wurde, wurde niemand geschickt.","Tamir duyurulmasına rağmen kimse gönderilmedi."],
+["Obwohl die Ware verfügbar sein sollte, wurde meine Bestellung storniert.","Ürün mevcut olması gerekmesine rağmen siparişim iptal edildi."],
+["Obwohl ich im Voraus bezahlt habe, wurde die Leistung nicht erbracht.","Önceden ödeme yapmama rağmen hizmet yerine getirilmedi."],
+["Obwohl das WLAN inklusive sein sollte, funktionierte es nicht.","Wi-Fi dahil olması gerekmesine rağmen çalışmadı."],
+["Obwohl ich um Hilfe gebeten habe, wurde mir nicht weitergeholfen.","Yardım istememe rağmen bana yardımcı olunmadı."],
+["Obwohl ich pünktlich war, wurde der Termin verschoben.","Dakik olmama rağmen randevu ertelendi."],
+["Obwohl ich eine Reklamation eingereicht habe, wurde keine Lösung angeboten.","Şikâyet sunmama rağmen çözüm önerilmedi."],
+["Obwohl das Produkt teuer war, entsprach die Qualität nicht meinen Erwartungen.","Ürün pahalı olmasına rağmen kalite beklentilerime uygun değildi."],
+["Obwohl ich die Situation erklärt habe, wurde ich nicht ernst genommen.","Durumu açıklamama rağmen ciddiye alınmadım."],
+["Obwohl Sie mir eine Rückmeldung zugesichert haben, habe ich bis heute nichts erhalten.","Bana geri dönüş sözü vermenize rağmen bugüne kadar hiçbir şey almadım."],
+]},
+{id:9,title:"Außerdem …",pattern:"Außerdem [CÜMLE].",desc:"Ek bilgi ekleme — ayrıca",sentences:[
+["Außerdem war das Produkt bereits beschädigt.","Ayrıca ürün zaten hasarlıydı."],
+["Außerdem habe ich keine Rechnung erhalten.","Ayrıca fatura almadım."],
+["Außerdem reagierte niemand auf meine E-Mails.","Ayrıca e-postalarıma kimse cevap vermedi."],
+["Außerdem war die Verpackung geöffnet.","Ayrıca paket açılmıştı."],
+["Außerdem war das Personal sehr unfreundlich.","Ayrıca personel çok kabaydı."],
+["Außerdem funktionierte die Klimaanlage nicht.","Ayrıca klima çalışmıyordu."],
+["Außerdem musste ich zusätzliche Gebühren bezahlen.","Ayrıca ek ücret ödemek zorunda kaldım."],
+["Außerdem war das Zimmer nicht sauber.","Ayrıca oda temiz değildi."],
+["Außerdem wurde der Termin kurzfristig abgesagt.","Ayrıca randevu kısa süre önce iptal edildi."],
+["Außerdem entsprach die Ware nicht der Beschreibung.","Ayrıca ürün açıklamaya uygun değildi."],
+["Außerdem war die Lieferung unvollständig.","Ayrıca teslimat eksikti."],
+["Außerdem erhielt ich widersprüchliche Informationen.","Ayrıca çelişkili bilgiler aldım."],
+["Außerdem musste ich lange auf eine Antwort warten.","Ayrıca cevap için uzun süre beklemek zorunda kaldım."],
+["Außerdem war die Qualität deutlich schlechter als erwartet.","Ayrıca kalite beklenenden çok daha kötüydü."],
+["Außerdem wurde meine Beschwerde ignoriert.","Ayrıca şikâyetim görmezden gelindi."],
+["Außerdem war die Internetverbindung sehr instabil.","Ayrıca internet bağlantısı çok dengesizdi."],
+["Außerdem wurde mir keine Entschädigung angeboten.","Ayrıca bana tazminat teklif edilmedi."],
+["Außerdem fehlten wichtige Informationen im Vertrag.","Ayrıca sözleşmede önemli bilgiler eksikti."],
+["Außerdem konnte ich niemanden telefonisch erreichen.","Ayrıca telefonla kimseye ulaşamadım."],
+["Außerdem wurde die versprochene Leistung nicht erbracht.","Ayrıca söz verilen hizmet yerine getirilmedi."],
+]},
+{id:10,title:"Hinzu kommt, dass …",pattern:"Hinzu kommt, dass [CÜMLE].",desc:"Ek şikâyet ekleme kalıbı",sentences:[
+["Hinzu kommt, dass die Lieferung verspätet war.","Buna ek olarak teslimat gecikti."],
+["Hinzu kommt, dass das Gerät nicht richtig funktioniert.","Buna ek olarak cihaz düzgün çalışmıyor."],
+["Hinzu kommt, dass niemand erreichbar war.","Buna ek olarak kimseye ulaşılamıyordu."],
+["Hinzu kommt, dass ich zusätzliche Kosten hatte.","Buna ek olarak ek masraflarım oldu."],
+["Hinzu kommt, dass das Zimmer sehr laut war.","Buna ek olarak oda çok gürültülüydü."],
+["Hinzu kommt, dass die Mitarbeiter unfreundlich waren.","Buna ek olarak çalışanlar kabaydı."],
+["Hinzu kommt, dass die Qualität mangelhaft war.","Buna ek olarak kalite yetersizdi."],
+["Hinzu kommt, dass die Rechnung falsch berechnet wurde.","Buna ek olarak fatura yanlış hesaplandı."],
+["Hinzu kommt, dass die Rückerstattung noch aussteht.","Buna ek olarak para iadesi hâlâ bekliyor."],
+["Hinzu kommt, dass die Informationen unklar waren.","Buna ek olarak bilgiler belirsizdi."],
+["Hinzu kommt, dass die Hotline nie erreichbar war.","Buna ek olarak danışma hattına hiç ulaşılamıyordu."],
+["Hinzu kommt, dass die Reparatur nicht durchgeführt wurde.","Buna ek olarak tamir yapılmadı."],
+["Hinzu kommt, dass ich keine schriftliche Bestätigung erhalten habe.","Buna ek olarak yazılı onay almadım."],
+["Hinzu kommt, dass der Service viel zu langsam war.","Buna ek olarak hizmet çok yavaştı."],
+["Hinzu kommt, dass meine Fragen unbeantwortet blieben.","Buna ek olarak sorularım cevapsız kaldı."],
+["Hinzu kommt, dass die Ware unvollständig geliefert wurde.","Buna ek olarak ürün eksik teslim edildi."],
+["Hinzu kommt, dass ich mehrmals nachfragen musste.","Buna ek olarak defalarca sormak zorunda kaldım."],
+["Hinzu kommt, dass der Termin ohne Erklärung verschoben wurde.","Buna ek olarak randevu açıklama yapılmadan ertelendi."],
+["Hinzu kommt, dass ich dadurch Zeit verloren habe.","Buna ek olarak bu yüzden zaman kaybettim."],
+["Hinzu kommt, dass die versprochenen Leistungen nicht eingehalten wurden.","Buna ek olarak söz verilen hizmetlere uyulmadı."],
+]},
+{id:11,title:"Besonders ärgerlich war, dass …",pattern:"Besonders ärgerlich war, dass [CÜMLE].",desc:"Özellikle rahatsız edici olan şeyi vurgulama",sentences:[
+["Besonders ärgerlich war, dass ich keine Antwort erhalten habe.","Özellikle sinir bozucu olan, cevap almamamdı."],
+["Besonders ärgerlich war, dass die Lieferung erneut verspätet war.","Özellikle sinir bozucu olan, teslimatın yeniden gecikmesiydi."],
+["Besonders ärgerlich war, dass niemand telefonisch erreichbar war.","Özellikle sinir bozucu olan, telefonla kimseye ulaşılamamasıydı."],
+["Besonders ärgerlich war, dass das Problem trotz meiner Beschwerde nicht gelöst wurde.","Özellikle sinir bozucu olan, şikâyetime rağmen problemin çözülmemesiydi."],
+["Besonders ärgerlich war, dass mir falsche Informationen gegeben wurden.","Özellikle sinir bozucu olan, bana yanlış bilgiler verilmesiydi."],
+["Besonders ärgerlich war, dass ich zusätzliche Kosten bezahlen musste.","Özellikle sinir bozucu olan, ek masraflar ödemek zorunda kalmamdı."],
+["Besonders ärgerlich war, dass die Ware beschädigt angekommen ist.","Özellikle sinir bozucu olan, ürünün hasarlı gelmesiydi."],
+["Besonders ärgerlich war, dass meine Reklamation ignoriert wurde.","Özellikle sinir bozucu olan, reklamasyonumun görmezden gelinmesiydi."],
+["Besonders ärgerlich war, dass der Kundenservice unfreundlich reagiert hat.","Özellikle sinir bozucu olan, müşteri hizmetlerinin kaba tepki vermesiydi."],
+["Besonders ärgerlich war, dass der Termin ohne Erklärung abgesagt wurde.","Özellikle sinir bozucu olan, randevunun açıklama yapılmadan iptal edilmesiydi."],
+["Besonders ärgerlich war, dass die Rechnung höher war als vereinbart.","Özellikle sinir bozucu olan, faturanın kararlaştırılandan yüksek olmasıydı."],
+["Besonders ärgerlich war, dass das Zimmer nicht gereinigt wurde.","Özellikle sinir bozucu olan, odanın temizlenmemesiydi."],
+["Besonders ärgerlich war, dass das Internet während meines Aufenthalts nicht funktionierte.","Özellikle sinir bozucu olan, konaklamam sırasında internetin çalışmamasıydı."],
+["Besonders ärgerlich war, dass ich mehrmals dieselbe Information erklären musste.","Özellikle sinir bozucu olan, aynı bilgiyi defalarca açıklamak zorunda kalmamdı."],
+["Besonders ärgerlich war, dass meine Anfrage wochenlang unbearbeitet blieb.","Özellikle sinir bozucu olan, talebimin haftalarca işlenmeden kalmasıydı."],
+["Besonders ärgerlich war, dass die zugesagte Rückerstattung nicht erfolgt ist.","Özellikle sinir bozucu olan, söz verilen para iadesinin yapılmamasıydı."],
+["Besonders ärgerlich war, dass die Ersatzlieferung ebenfalls fehlerhaft war.","Özellikle sinir bozucu olan, yeni gönderilen ürünün de hatalı olmasıydı."],
+["Besonders ärgerlich war, dass ich keine schriftliche Bestätigung bekommen habe.","Özellikle sinir bozucu olan, yazılı onay almamamdı."],
+["Besonders ärgerlich war, dass die versprochene Leistung überhaupt nicht erbracht wurde.","Özellikle sinir bozucu olan, söz verilen hizmetin hiç yerine getirilmemesiydi."],
+["Besonders ärgerlich war, dass ich dadurch viel Zeit verloren habe.","Özellikle sinir bozucu olan, bu yüzden çok zaman kaybetmemdi."],
+]},
+{id:12,title:"Trotz mehrmaliger Nachfrage …",pattern:"Trotz mehrmaliger Nachfrage [CÜMLE].",desc:"Defalarca sormaya rağmen kalıbı",sentences:[
+["Trotz mehrmaliger Nachfrage habe ich keine Antwort erhalten.","Defalarca sormama rağmen cevap alamadım."],
+["Trotz mehrmaliger Nachfrage wurde mein Anliegen nicht bearbeitet.","Defalarca sormama rağmen talebim işleme alınmadı."],
+["Trotz mehrmaliger Nachfrage wurde das Problem nicht gelöst.","Defalarca sormama rağmen problem çözülmedi."],
+["Trotz mehrmaliger Nachfrage habe ich keine schriftliche Rückmeldung bekommen.","Defalarca sormama rağmen yazılı geri dönüş almadım."],
+["Trotz mehrmaliger Nachfrage wurde mir kein Ersatz geschickt.","Defalarca sormama rağmen bana yenisi gönderilmedi."],
+["Trotz mehrmaliger Nachfrage wurde der Betrag nicht erstattet.","Defalarca sormama rağmen tutar geri ödenmedi."],
+["Trotz mehrmaliger Nachfrage blieb meine Beschwerde unbeantwortet.","Defalarca sormama rağmen şikâyetim cevapsız kaldı."],
+["Trotz mehrmaliger Nachfrage konnte mir niemand weiterhelfen.","Defalarca sormama rağmen kimse bana yardımcı olamadı."],
+["Trotz mehrmaliger Nachfrage wurde die Rechnung nicht korrigiert.","Defalarca sormama rağmen fatura düzeltilmedi."],
+["Trotz mehrmaliger Nachfrage wurde der Mangel nicht behoben.","Defalarca sormama rağmen kusur giderilmedi."],
+["Trotz mehrmaliger Nachfrage erhielt ich nur allgemeine Antworten.","Defalarca sormama rağmen sadece genel cevaplar aldım."],
+["Trotz mehrmaliger Nachfrage wurde mir kein konkreter Termin genannt.","Defalarca sormama rağmen bana somut bir randevu tarihi verilmedi."],
+["Trotz mehrmaliger Nachfrage hat sich niemand bei mir gemeldet.","Defalarca sormama rağmen kimse benimle iletişime geçmedi."],
+["Trotz mehrmaliger Nachfrage wurde meine Reklamation nicht weitergeleitet.","Defalarca sormama rağmen reklamasyonum iletilmedi."],
+["Trotz mehrmaliger Nachfrage wurde keine Lösung angeboten.","Defalarca sormama rağmen çözüm önerilmedi."],
+["Trotz mehrmaliger Nachfrage wurde der Vertrag nicht überprüft.","Defalarca sormama rağmen sözleşme kontrol edilmedi."],
+["Trotz mehrmaliger Nachfrage bekam ich keine Erklärung.","Defalarca sormama rağmen açıklama almadım."],
+["Trotz mehrmaliger Nachfrage wurde der Schaden nicht anerkannt.","Defalarca sormama rağmen hasar kabul edilmedi."],
+["Trotz mehrmaliger Nachfrage wurde die Reparatur nicht durchgeführt.","Defalarca sormama rağmen tamir yapılmadı."],
+["Trotz mehrmaliger Nachfrage wurde meine Anfrage immer wieder verschoben.","Defalarca sormama rağmen talebim sürekli ertelendi."],
+]},
+{id:13,title:"Dadurch sind mir zusätzliche Kosten entstanden.",pattern:"Dadurch sind mir [MASRAF] entstanden.",desc:"Sonuç olarak ek masraf çıktı kalıbı",sentences:[
+["Dadurch sind mir zusätzliche Kosten entstanden.","Bu yüzden bana ek masraflar çıktı."],
+["Dadurch sind mir zusätzliche Fahrtkosten entstanden.","Bu yüzden bana ek yol masrafları çıktı."],
+["Dadurch sind mir unnötige Kosten entstanden.","Bu yüzden bana gereksiz masraflar çıktı."],
+["Dadurch sind mir erhebliche Zusatzkosten entstanden.","Bu yüzden bana ciddi ek masraflar çıktı."],
+["Dadurch sind mir Kosten in Höhe von 50 Euro entstanden.","Bu yüzden bana 50 Euro tutarında masraf çıktı."],
+["Dadurch sind mir zusätzliche Übernachtungskosten entstanden.","Bu yüzden bana ek konaklama masrafları çıktı."],
+["Dadurch sind mir zusätzliche Telefonkosten entstanden.","Bu yüzden bana ek telefon masrafları çıktı."],
+["Dadurch sind mir zusätzliche Versandkosten entstanden.","Bu yüzden bana ek kargo masrafları çıktı."],
+["Dadurch sind mir zusätzliche Reparaturkosten entstanden.","Bu yüzden bana ek tamir masrafları çıktı."],
+["Dadurch sind mir Kosten entstanden, die vermeidbar gewesen wären.","Bu yüzden bana önlenebilir masraflar çıktı."],
+["Dadurch sind mir finanzielle Nachteile entstanden.","Bu yüzden maddi zarara uğradım."],
+["Dadurch sind mir nicht nur Kosten, sondern auch erhebliche Unannehmlichkeiten entstanden.","Bu yüzden sadece masraf değil, aynı zamanda ciddi sıkıntılar yaşadım."],
+["Dadurch sind mir zusätzliche Kosten entstanden, die ich nicht zu verantworten habe.","Bu yüzden benim sorumlu olmadığım ek masraflar çıktı."],
+["Dadurch sind mir höhere Kosten entstanden als ursprünglich vereinbart.","Bu yüzden bana başlangıçta kararlaştırılandan daha yüksek masraflar çıktı."],
+["Dadurch sind mir zusätzliche Kosten entstanden, obwohl der Fehler nicht bei mir lag.","Hata bende olmamasına rağmen bu yüzden bana ek masraflar çıktı."],
+["Dadurch sind mir unerwartete Zusatzkosten entstanden.","Bu yüzden beklenmedik ek masraflar çıktı."],
+["Dadurch sind mir Kosten entstanden, die ich von Ihnen erstattet haben möchte.","Bu yüzden bana masraf çıktı ve bunların sizin tarafınızdan karşılanmasını istiyorum."],
+["Dadurch sind mir zusätzliche Kosten entstanden, weil ich eine andere Lösung finden musste.","Başka bir çözüm bulmak zorunda kaldığım için bu yüzden bana ek masraflar çıktı."],
+["Dadurch sind mir zusätzliche Kosten entstanden, da ich den Service erneut bezahlen musste.","Hizmeti yeniden ödemek zorunda kaldığım için bu yüzden bana ek masraflar çıktı."],
+["Dadurch sind mir zusätzliche Kosten entstanden, die ich nicht akzeptieren kann.","Bu yüzden bana kabul edemeyeceğim ek masraflar çıktı."],
+]},
+{id:14,title:"Das ist für mich nicht akzeptabel.",pattern:"[ŞEYI] ist für mich nicht akzeptabel.",desc:"Kabul edilemez bulma ifadeleri",sentences:[
+["Das ist für mich nicht akzeptabel.","Bu benim için kabul edilebilir değil."],
+["Diese Situation ist für mich nicht akzeptabel.","Bu durum benim için kabul edilebilir değil."],
+["Ein solcher Service ist für mich nicht akzeptabel.","Böyle bir hizmet benim için kabul edilebilir değil."],
+["Eine solche Verzögerung ist für mich nicht akzeptabel.","Böyle bir gecikme benim için kabul edilebilir değil."],
+["Diese Art der Kommunikation ist für mich nicht akzeptabel.","Bu tür iletişim benim için kabul edilebilir değil."],
+["Die fehlende Rückmeldung ist für mich nicht akzeptabel.","Geri dönüş olmaması benim için kabul edilebilir değil."],
+["Die zusätzlichen Kosten sind für mich nicht akzeptabel.","Ek masraflar benim için kabul edilebilir değil."],
+["Die schlechte Qualität ist für mich nicht akzeptabel.","Kötü kalite benim için kabul edilebilir değil."],
+["Die lange Wartezeit ist für mich nicht akzeptabel.","Uzun bekleme süresi benim için kabul edilebilir değil."],
+["Die unfreundliche Behandlung ist für mich nicht akzeptabel.","Kaba muamele benim için kabul edilebilir değil."],
+["Die mangelhafte Leistung ist für mich nicht akzeptabel.","Yetersiz hizmet benim için kabul edilebilir değil."],
+["Die falsche Berechnung ist für mich nicht akzeptabel.","Yanlış hesaplama benim için kabul edilebilir değil."],
+["Die wiederholte Verzögerung ist für mich nicht akzeptabel.","Tekrarlanan gecikme benim için kabul edilebilir değil."],
+["Die fehlende Erstattung ist für mich nicht akzeptabel.","Para iadesinin yapılmaması benim için kabul edilebilir değil."],
+["Die unvollständige Lieferung ist für mich nicht akzeptabel.","Eksik teslimat benim için kabul edilebilir değil."],
+["Die unklare Auskunft ist für mich nicht akzeptabel.","Belirsiz bilgi benim için kabul edilebilir değil."],
+["Die kurzfristige Absage ist für mich nicht akzeptabel.","Kısa süre önce yapılan iptal benim için kabul edilebilir değil."],
+["Die mangelhafte Bearbeitung meiner Reklamation ist für mich nicht akzeptabel.","Reklamasyonumun yetersiz işlenmesi benim için kabul edilebilir değil."],
+["Dass ich trotz Zahlung keine Leistung erhalten habe, ist für mich nicht akzeptabel.","Ödeme yapmama rağmen hizmet almamam benim için kabul edilebilir değil."],
+["Dass meine Beschwerde ignoriert wurde, ist für mich nicht akzeptabel.","Şikâyetimin görmezden gelinmesi benim için kabul edilebilir değil."],
+]},
+{id:15,title:"Ich halte dieses Vorgehen für unangemessen.",pattern:"Ich halte [ŞEYI] für unangemessen.",desc:"Uygunsuz bulmak — halte für",sentences:[
+["Ich halte dieses Vorgehen für unangemessen.","Bu davranışı / yöntemi uygunsuz buluyorum."],
+["Ich halte diese Entscheidung für unangemessen.","Bu kararı uygunsuz buluyorum."],
+["Ich halte diese Reaktion für unangemessen.","Bu tepkiyi uygunsuz buluyorum."],
+["Ich halte die lange Bearbeitungszeit für unangemessen.","Uzun işlem süresini uygunsuz buluyorum."],
+["Ich halte die zusätzlichen Gebühren für unangemessen.","Ek ücretleri uygunsuz buluyorum."],
+["Ich halte die Ablehnung meiner Reklamation für unangemessen.","Reklamasyonumun reddedilmesini uygunsuz buluyorum."],
+["Ich halte die fehlende Rückmeldung für unangemessen.","Geri dönüş yapılmamasını uygunsuz buluyorum."],
+["Ich halte die unfreundliche Behandlung für unangemessen.","Kaba muameleyi uygunsuz buluyorum."],
+["Ich halte die kurzfristige Absage für unangemessen.","Kısa süre önce yapılan iptali uygunsuz buluyorum."],
+["Ich halte die mangelhafte Leistung für unangemessen.","Yetersiz hizmeti uygunsuz buluyorum."],
+["Ich halte die falsche Berechnung für unangemessen.","Yanlış hesaplamayı uygunsuz buluyorum."],
+["Ich halte die fehlende Entschädigung für unangemessen.","Telafi / tazminat sunulmamasını uygunsuz buluyorum."],
+["Ich halte die verspätete Lieferung für unangemessen.","Geciken teslimatı uygunsuz buluyorum."],
+["Ich halte die Art der Kommunikation für unangemessen.","İletişim tarzını uygunsuz buluyorum."],
+["Ich halte es für unangemessen, dass meine Beschwerde ignoriert wurde.","Şikâyetimin görmezden gelinmesini uygunsuz buluyorum."],
+["Ich halte es für unangemessen, dass mir keine Lösung angeboten wurde.","Bana hiçbir çözüm sunulmamasını uygunsuz buluyorum."],
+["Ich halte es für unangemessen, dass ich zusätzliche Kosten tragen soll.","Ek masrafları benim karşılamam gerektiğini uygunsuz buluyorum."],
+["Ich halte es für unangemessen, dass der Fehler nicht korrigiert wurde.","Hatanın düzeltilmemesini uygunsuz buluyorum."],
+["Ich halte es für unangemessen, dass die Rückerstattung so lange dauert.","Para iadesinin bu kadar uzun sürmesini uygunsuz buluyorum."],
+["Ich halte es für unangemessen, dass trotz meiner Hinweise nichts unternommen wurde.","Uyarılarıma rağmen hiçbir şey yapılmamasını uygunsuz buluyorum."],
+]},
+{id:16,title:"Ich bitte Sie daher, … (Forderungen)",pattern:"Ich bitte Sie daher, [İSTEK].",desc:"Rica / talep — Forderungen versiyonu",sentences:[
+["Ich bitte Sie daher, mir den Betrag zurückzuerstatten.","Bu nedenle tutarı bana geri ödemenizi rica ediyorum."],
+["Ich bitte Sie daher, das Problem schnell zu lösen.","Bu nedenle problemi hızlıca çözmenizi rica ediyorum."],
+["Ich bitte Sie daher, die Rechnung zu korrigieren.","Bu nedenle faturayı düzeltmenizi rica ediyorum."],
+["Ich bitte Sie daher, mir einen Ersatz zu schicken.","Bu nedenle bana yenisini göndermenizi rica ediyorum."],
+["Ich bitte Sie daher, den Mangel zu beheben.","Bu nedenle kusuru gidermenizi rica ediyorum."],
+["Ich bitte Sie daher, meine Reklamation erneut zu prüfen.","Bu nedenle reklamasyonumu yeniden incelemenizi rica ediyorum."],
+["Ich bitte Sie daher, mir schriftlich zu antworten.","Bu nedenle bana yazılı cevap vermenizi rica ediyorum."],
+["Ich bitte Sie daher, die zusätzlichen Kosten zu erstatten.","Bu nedenle ek masrafları geri ödemenizi rica ediyorum."],
+["Ich bitte Sie daher, mir eine angemessene Lösung anzubieten.","Bu nedenle bana uygun bir çözüm sunmanızı rica ediyorum."],
+["Ich bitte Sie daher, die Lieferung erneut zu veranlassen.","Bu nedenle teslimatı yeniden başlatmanızı rica ediyorum."],
+["Ich bitte Sie daher, den Vertrag zu überprüfen.","Bu nedenle sözleşmeyi kontrol etmenizi rica ediyorum."],
+["Ich bitte Sie daher, die Angelegenheit ernst zu nehmen.","Bu nedenle konuyu ciddiye almanızı rica ediyorum."],
+["Ich bitte Sie daher, die Ware zurückzunehmen.","Bu nedenle ürünü geri almanızı rica ediyorum."],
+["Ich bitte Sie daher, mir einen Preisnachlass zu gewähren.","Bu nedenle bana indirim yapmanızı rica ediyorum."],
+["Ich bitte Sie daher, mir eine schriftliche Bestätigung zu schicken.","Bu nedenle bana yazılı onay göndermenizi rica ediyorum."],
+["Ich bitte Sie daher, die Reparatur kurzfristig durchzuführen.","Bu nedenle tamiri kısa süre içinde yapmanızı rica ediyorum."],
+["Ich bitte Sie daher, mir die entstandenen Kosten zu ersetzen.","Bu nedenle oluşan masrafları bana ödemenizi rica ediyorum."],
+["Ich bitte Sie daher, die falschen Angaben zu berichtigen.","Bu nedenle yanlış bilgileri düzeltmenizi rica ediyorum."],
+["Ich bitte Sie daher, meine Beschwerde an die zuständige Abteilung weiterzuleiten.","Bu nedenle şikâyetimi ilgili bölüme iletmenizi rica ediyorum."],
+["Ich bitte Sie daher, mir bis zum genannten Termin zu antworten.","Bu nedenle belirtilen tarihe kadar bana cevap vermenizi rica ediyorum."],
+]},
+{id:17,title:"Ich fordere Sie auf, …",pattern:"Ich fordere Sie auf, [İSTEK].",desc:"Talep kalıbı — resmi ve güçlü",sentences:[
+["Ich fordere Sie auf, den Betrag zurückzuerstatten.","Sizden tutarı geri ödemenizi talep ediyorum."],
+["Ich fordere Sie auf, die Rechnung zu korrigieren.","Sizden faturayı düzeltmenizi talep ediyorum."],
+["Ich fordere Sie auf, den Mangel unverzüglich zu beheben.","Sizden kusuru derhal gidermenizi talep ediyorum."],
+["Ich fordere Sie auf, mir einen Ersatz zu schicken.","Sizden bana yenisini göndermenizi talep ediyorum."],
+["Ich fordere Sie auf, meine Reklamation ernst zu nehmen.","Sizden reklamasyonumu ciddiye almanızı talep ediyorum."],
+["Ich fordere Sie auf, mir schriftlich zu antworten.","Sizden bana yazılı cevap vermenizi talep ediyorum."],
+["Ich fordere Sie auf, die zusätzlichen Kosten zu erstatten.","Sizden ek masrafları geri ödemenizi talep ediyorum."],
+["Ich fordere Sie auf, die falschen Angaben zu korrigieren.","Sizden yanlış bilgileri düzeltmenizi talep ediyorum."],
+["Ich fordere Sie auf, die Lieferung erneut zu veranlassen.","Sizden teslimatı yeniden başlatmanızı talep ediyorum."],
+["Ich fordere Sie auf, den Vertrag zu überprüfen.","Sizden sözleşmeyi kontrol etmenizi talep ediyorum."],
+["Ich fordere Sie auf, die Ware zurückzunehmen.","Sizden ürünü geri almanızı talep ediyorum."],
+["Ich fordere Sie auf, mir eine Entschädigung anzubieten.","Sizden bana bir telafi / tazminat sunmanızı talep ediyorum."],
+["Ich fordere Sie auf, die versprochene Leistung zu erbringen.","Sizden söz verilen hizmeti yerine getirmenizi talep ediyorum."],
+["Ich fordere Sie auf, die Bearbeitung meiner Anfrage abzuschließen.","Sizden talebimin işlenmesini tamamlamanızı talep ediyorum."],
+["Ich fordere Sie auf, den Schaden anzuerkennen.","Sizden hasarı kabul etmenizi talep ediyorum."],
+["Ich fordere Sie auf, die Reparatur durchführen zu lassen.","Sizden tamirin yaptırılmasını talep ediyorum."],
+["Ich fordere Sie auf, die Rückerstattung nicht weiter zu verzögern.","Sizden para iadesini daha fazla geciktirmemenizi talep ediyorum."],
+["Ich fordere Sie auf, die Angelegenheit umgehend zu klären.","Sizden konuyu derhal açıklığa kavuşturmanızı talep ediyorum."],
+["Ich fordere Sie auf, mir eine verbindliche Antwort zu geben.","Sizden bana bağlayıcı / kesin bir cevap vermenizi talep ediyorum."],
+["Ich fordere Sie auf, bis zum genannten Datum zu reagieren.","Sizden belirtilen tarihe kadar cevap vermenizi talep ediyorum."],
+]},
+{id:18,title:"Ich erwarte, dass …",pattern:"Ich erwarte, dass [CÜMLE].",desc:"Beklenti ifadesi kalıbı",sentences:[
+["Ich erwarte, dass Sie das Problem schnell lösen.","Problemi hızlıca çözmenizi bekliyorum."],
+["Ich erwarte, dass Sie mir den Betrag zurückerstatten.","Tutarı bana geri ödemenizi bekliyorum."],
+["Ich erwarte, dass Sie mir zeitnah antworten.","Bana kısa sürede cevap vermenizi bekliyorum."],
+["Ich erwarte, dass Sie die Rechnung korrigieren.","Faturayı düzeltmenizi bekliyorum."],
+["Ich erwarte, dass Sie den Mangel beheben.","Kusuru gidermenizi bekliyorum."],
+["Ich erwarte, dass Sie mir eine faire Lösung anbieten.","Bana adil bir çözüm sunmanızı bekliyorum."],
+["Ich erwarte, dass Sie die zusätzlichen Kosten übernehmen.","Ek masrafları üstlenmenizi bekliyorum."],
+["Ich erwarte, dass Sie meine Beschwerde ernst nehmen.","Şikâyetimi ciddiye almanızı bekliyorum."],
+["Ich erwarte, dass Sie mir einen Ersatz schicken.","Bana yenisini göndermenizi bekliyorum."],
+["Ich erwarte, dass Sie mir schriftlich antworten.","Bana yazılı cevap vermenizi bekliyorum."],
+["Ich erwarte, dass Sie die Ware zurücknehmen.","Ürünü geri almanızı bekliyorum."],
+["Ich erwarte, dass Sie die Rückerstattung unverzüglich veranlassen.","Para iadesini derhal başlatmanızı bekliyorum."],
+["Ich erwarte, dass Sie die versprochene Leistung erbringen.","Söz verilen hizmeti yerine getirmenizi bekliyorum."],
+["Ich erwarte, dass Sie mir eine nachvollziehbare Erklärung geben.","Bana anlaşılır bir açıklama vermenizi bekliyorum."],
+["Ich erwarte, dass Sie die Situation sorgfältig prüfen.","Durumu dikkatlice incelemenizi bekliyorum."],
+["Ich erwarte, dass Sie die falschen Angaben berichtigen.","Yanlış bilgileri düzeltmenizi bekliyorum."],
+["Ich erwarte, dass Sie den Schaden vollständig ersetzen.","Zararı tamamen karşılamanızı bekliyorum."],
+["Ich erwarte, dass Sie die Angelegenheit nicht weiter verzögern.","Konuyu daha fazla geciktirmemenizi bekliyorum."],
+["Ich erwarte, dass Sie mir einen konkreten Lösungsvorschlag machen.","Bana somut bir çözüm önerisi sunmanızı bekliyorum."],
+["Ich erwarte, dass Sie bis zum genannten Datum reagieren.","Belirtilen tarihe kadar cevap vermenizi bekliyorum."],
+]},
+{id:19,title:"Bitte erstatten Sie mir den Betrag zurück.",pattern:"Bitte erstatten Sie mir [TUTAR] zurück.",desc:"Para iadesi talep etme kalıbı",sentences:[
+["Bitte erstatten Sie mir den Betrag zurück.","Lütfen tutarı bana geri ödeyin."],
+["Bitte erstatten Sie mir den vollständigen Betrag zurück.","Lütfen tutarın tamamını bana geri ödeyin."],
+["Bitte erstatten Sie mir den bereits gezahlten Betrag zurück.","Lütfen önceden ödenmiş tutarı bana geri ödeyin."],
+["Bitte erstatten Sie mir den Betrag innerhalb von 14 Tagen zurück.","Lütfen tutarı 14 gün içinde bana geri ödeyin."],
+["Bitte erstatten Sie mir den Betrag auf mein Konto zurück.","Lütfen tutarı hesabıma geri ödeyin."],
+["Bitte erstatten Sie mir die zusätzlichen Kosten zurück.","Lütfen ek masrafları bana geri ödeyin."],
+["Bitte erstatten Sie mir die Versandkosten zurück.","Lütfen kargo masraflarını bana geri ödeyin."],
+["Bitte erstatten Sie mir die Reparaturkosten zurück.","Lütfen tamir masraflarını bana geri ödeyin."],
+["Bitte erstatten Sie mir den Kaufpreis zurück.","Lütfen satın alma bedelini bana geri ödeyin."],
+["Bitte erstatten Sie mir den Betrag, den ich zusätzlich zahlen musste, zurück.","Lütfen ek olarak ödemek zorunda kaldığım tutarı bana geri ödeyin."],
+]},
+{id:20,title:"Ich bitte um eine schriftliche Stellungnahme.",pattern:"Ich bitte um eine schriftliche Stellungnahme zu [KONU].",desc:"Yazılı açıklama talep etme kalıbı",sentences:[
+["Ich bitte um eine schriftliche Stellungnahme.","Yazılı bir açıklama rica ediyorum."],
+["Ich bitte um eine schriftliche Stellungnahme zu diesem Vorfall.","Bu olayla ilgili yazılı bir açıklama rica ediyorum."],
+["Ich bitte um eine schriftliche Stellungnahme zu meiner Beschwerde.","Şikâyetimle ilgili yazılı bir açıklama rica ediyorum."],
+["Ich bitte um eine schriftliche Stellungnahme zu der fehlerhaften Rechnung.","Hatalı faturayla ilgili yazılı açıklama rica ediyorum."],
+["Ich bitte um eine schriftliche Stellungnahme zu der verspäteten Lieferung.","Geç teslimatla ilgili yazılı açıklama rica ediyorum."],
+["Ich bitte um eine schriftliche Stellungnahme zu den zusätzlichen Kosten.","Ek masraflarla ilgili yazılı açıklama rica ediyorum."],
+["Ich bitte um eine schriftliche Stellungnahme zu der abgelehnten Reklamation.","Reddedilen reklamasyonla ilgili yazılı açıklama rica ediyorum."],
+["Ich bitte um eine schriftliche Stellungnahme zu der nicht erbrachten Leistung.","Yerine getirilmeyen hizmetle ilgili yazılı açıklama rica ediyorum."],
+["Ich bitte um eine schriftliche Stellungnahme zu der mangelhaften Qualität.","Yetersiz kaliteyle ilgili yazılı açıklama rica ediyorum."],
+["Ich bitte um eine schriftliche Stellungnahme zu der fehlenden Rückerstattung.","Yapılmayan para iadesiyle ilgili yazılı açıklama rica ediyorum."],
+]},
+{id:21,title:"Ich bitte um eine Rückmeldung bis zum …",pattern:"Ich bitte um eine Rückmeldung bis [TARİH].",desc:"Geri dönüş tarihi belirleme kalıbı",sentences:[
+["Ich bitte um eine Rückmeldung bis zum 30. Mai.","30 Mayıs'a kadar geri dönüş rica ediyorum."],
+["Ich bitte um eine Rückmeldung bis spätestens Freitag.","En geç cuma gününe kadar geri dönüş rica ediyorum."],
+["Ich bitte um eine Rückmeldung bis Ende dieser Woche.","Bu haftanın sonuna kadar geri dönüş rica ediyorum."],
+["Ich bitte um eine Rückmeldung innerhalb von 14 Tagen.","14 gün içinde geri dönüş rica ediyorum."],
+["Ich bitte um eine Rückmeldung bis zum genannten Datum.","Belirtilen tarihe kadar geri dönüş rica ediyorum."],
+["Ich bitte um eine Rückmeldung, damit die Angelegenheit geklärt werden kann.","Konunun açıklığa kavuşturulabilmesi için geri dönüş rica ediyorum."],
+["Ich bitte um eine Rückmeldung, wie Sie das Problem lösen möchten.","Problemi nasıl çözmek istediğiniz konusunda geri dönüş rica ediyorum."],
+["Ich bitte um eine Rückmeldung zu meiner Reklamation.","Reklamasyonumla ilgili geri dönüş rica ediyorum."],
+["Ich bitte um eine Rückmeldung zu meiner Beschwerde.","Şikâyetimle ilgili geri dönüş rica ediyorum."],
+["Ich bitte um eine zeitnahe Rückmeldung.","Kısa süre içinde geri dönüş rica ediyorum."],
+]},
+{id:22,title:"Sollte ich bis dahin keine Antwort erhalten, …",pattern:"Sollte ich bis dahin keine Antwort erhalten, [SONUÇ].",desc:"Koşullu uyarı kalıbı",sentences:[
+["Sollte ich bis dahin keine Antwort erhalten, werde ich weitere Schritte einleiten.","O zamana kadar cevap almazsam, başka adımlar atacağım."],
+["Sollte ich bis dahin keine Antwort erhalten, werde ich mich erneut an Sie wenden.","O zamana kadar cevap almazsam, size tekrar başvuracağım."],
+["Sollte ich bis dahin keine Antwort erhalten, werde ich rechtliche Beratung in Anspruch nehmen.","O zamana kadar cevap almazsam, hukuki danışmanlık alacağım."],
+["Sollte ich bis dahin keine Antwort erhalten, werde ich den Fall weiterleiten.","O zamana kadar cevap almazsam, dosyayı / konuyu ileteceğim."],
+["Sollte ich bis dahin keine Antwort erhalten, werde ich meine Ansprüche weiterverfolgen.","O zamana kadar cevap almazsam, haklarımı takip etmeye devam edeceğim."],
+["Sollte ich bis dahin keine Antwort erhalten, sehe ich mich gezwungen, weitere Maßnahmen zu ergreifen.","O zamana kadar cevap almazsam, başka önlemler almak zorunda kalacağım."],
+["Sollte ich bis dahin keine Antwort erhalten, werde ich die Angelegenheit offiziell melden.","O zamana kadar cevap almazsam, konuyu resmî olarak bildireceğim."],
+["Sollte ich bis dahin keine Antwort erhalten, werde ich mich an die zuständige Stelle wenden.","O zamana kadar cevap almazsam, ilgili kuruma başvuracağım."],
+["Sollte ich bis dahin keine Antwort erhalten, werde ich die Zahlung zurückfordern.","O zamana kadar cevap almazsam, ödemeyi geri talep edeceğim."],
+["Sollte ich bis dahin keine Antwort erhalten, werde ich die Angelegenheit nicht weiter hinnehmen.","O zamana kadar cevap almazsam, bu duruma daha fazla katlanmayacağım."],
+]},
+{id:23,title:"Falls keine Lösung gefunden wird, …",pattern:"Falls keine Lösung gefunden wird, [SONUÇ].",desc:"Çözüm bulunamazsa ne olur — uyarı",sentences:[
+["Falls keine Lösung gefunden wird, werde ich weitere Schritte einleiten.","Bir çözüm bulunmazsa, başka adımlar atacağım."],
+["Falls keine Lösung gefunden wird, werde ich mich an die zuständige Stelle wenden.","Bir çözüm bulunmazsa, ilgili kuruma başvuracağım."],
+["Falls keine Lösung gefunden wird, werde ich rechtliche Beratung in Anspruch nehmen.","Bir çözüm bulunmazsa, hukuki danışmanlık alacağım."],
+["Falls keine Lösung gefunden wird, sehe ich mich gezwungen, die Angelegenheit weiterzuleiten.","Bir çözüm bulunmazsa, konuyu iletmek zorunda kalacağım."],
+["Falls keine Lösung gefunden wird, werde ich meine Ansprüche weiterverfolgen.","Bir çözüm bulunmazsa, haklarımı takip etmeye devam edeceğim."],
+["Falls keine Lösung gefunden wird, kann ich diese Situation nicht akzeptieren.","Bir çözüm bulunmazsa, bu durumu kabul edemem."],
+["Falls keine Lösung gefunden wird, erwarte ich zumindest eine schriftliche Begründung.","Bir çözüm bulunmazsa, en azından yazılı bir gerekçe bekliyorum."],
+["Falls keine Lösung gefunden wird, werde ich die entstandenen Kosten zurückfordern.","Bir çözüm bulunmazsa, oluşan masrafları geri talep edeceğim."],
+["Falls keine Lösung gefunden wird, werde ich den Vertrag kündigen.","Bir çözüm bulunmazsa, sözleşmeyi feshedeceğim."],
+["Falls keine Lösung gefunden wird, werde ich die Ware zurücksenden.","Bir çözüm bulunmazsa, ürünü geri göndereceğim."],
+]},
+{id:24,title:"Ich hoffe auf eine schnelle und faire Lösung.",pattern:"Ich hoffe auf [ŞEYI].",desc:"Umudu ifade etme — yazı sonu kalıbı",sentences:[
+["Ich hoffe auf eine schnelle und faire Lösung.","Hızlı ve adil bir çözüm umuyorum."],
+["Ich hoffe auf eine zeitnahe Lösung des Problems.","Problemin kısa sürede çözülmesini umuyorum."],
+["Ich hoffe auf eine faire Klärung der Angelegenheit.","Konunun adil şekilde açıklığa kavuşmasını umuyorum."],
+["Ich hoffe auf eine schnelle Bearbeitung meiner Beschwerde.","Şikâyetimin hızlı şekilde işleme alınmasını umuyorum."],
+["Ich hoffe auf eine zufriedenstellende Lösung.","Memnun edici bir çözüm umuyorum."],
+["Ich hoffe auf eine unkomplizierte Lösung.","Sorunsuz / pratik bir çözüm umuyorum."],
+["Ich hoffe auf eine kundenfreundliche Lösung.","Müşteri dostu bir çözüm umuyorum."],
+["Ich hoffe auf eine klare Antwort.","Net bir cevap umuyorum."],
+["Ich hoffe auf eine schnelle Rückmeldung.","Hızlı bir geri dönüş umuyorum."],
+["Ich hoffe auf eine angemessene Entschädigung.","Uygun bir telafi / tazminat umuyorum."],
+]},
+{id:25,title:"Ich gehe davon aus, dass …",pattern:"Ich gehe davon aus, dass [CÜMLE].",desc:"Varsayım ifadesi kalıbı",sentences:[
+["Ich gehe davon aus, dass Sie das Problem zeitnah lösen werden.","Problemi kısa sürede çözeceğinizi varsayıyorum."],
+["Ich gehe davon aus, dass Sie meine Beschwerde ernst nehmen.","Şikâyetimi ciddiye alacağınızı varsayıyorum."],
+["Ich gehe davon aus, dass Sie mir den Betrag zurückerstatten.","Tutarı bana geri ödeyeceğinizi varsayıyorum."],
+["Ich gehe davon aus, dass Sie die Rechnung korrigieren werden.","Faturayı düzelteceğinizi varsayıyorum."],
+["Ich gehe davon aus, dass Sie den Mangel schnell beheben.","Kusuru hızlıca gidereceğinizi varsayıyorum."],
+["Ich gehe davon aus, dass Sie mir schriftlich antworten.","Bana yazılı cevap vereceğinizi varsayıyorum."],
+["Ich gehe davon aus, dass Sie eine faire Lösung anbieten.","Adil bir çözüm sunacağınızı varsayıyorum."],
+["Ich gehe davon aus, dass Sie die zusätzlichen Kosten übernehmen.","Ek masrafları üstleneceğinizi varsayıyorum."],
+["Ich gehe davon aus, dass Sie die Angelegenheit sorgfältig prüfen.","Konuyu dikkatlice inceleyeceğinizi varsayıyorum."],
+["Ich gehe davon aus, dass Sie mir bis zum genannten Datum antworten.","Belirtilen tarihe kadar bana cevap vereceğinizi varsayıyorum."],
+]},
+{id:26,title:"Vielen Dank im Voraus für Ihre Rückmeldung.",pattern:"Vielen Dank im Voraus für [ŞEYI].",desc:"Şimdiden teşekkür — yazı kapanış kalıbı",sentences:[
+["Vielen Dank im Voraus für Ihre Rückmeldung.","Cevabınız için şimdiden teşekkür ederim."],
+["Vielen Dank im Voraus für Ihre schnelle Rückmeldung.","Hızlı cevabınız için şimdiden teşekkür ederim."],
+["Vielen Dank im Voraus für Ihre Unterstützung.","Desteğiniz için şimdiden teşekkür ederim."],
+["Vielen Dank im Voraus für Ihre Mühe.","Emeğiniz için şimdiden teşekkür ederim."],
+["Vielen Dank im Voraus für die Bearbeitung meiner Beschwerde.","Şikâyetimin işleme alınması için şimdiden teşekkür ederim."],
+["Vielen Dank im Voraus für die Klärung der Angelegenheit.","Konunun açıklığa kavuşturulması için şimdiden teşekkür ederim."],
+["Vielen Dank im Voraus für Ihre schriftliche Antwort.","Yazılı cevabınız için şimdiden teşekkür ederim."],
+["Vielen Dank im Voraus für eine faire Lösung.","Adil bir çözüm için şimdiden teşekkür ederim."],
+["Vielen Dank im Voraus für Ihre zeitnahe Bearbeitung.","Kısa sürede işlem yapmanız için şimdiden teşekkür ederim."],
+["Vielen Dank im Voraus für Ihre Kooperation.","İş birliğiniz için şimdiden teşekkür ederim."],
+]},
+{id:27,title:"Für Rückfragen stehe ich Ihnen gerne zur Verfügung.",pattern:"Für Rückfragen stehe ich Ihnen gerne zur Verfügung.",desc:"İletişime açık olduğunu belirtme kalıbı",sentences:[
+["Für Rückfragen stehe ich Ihnen gerne zur Verfügung.","Sorularınız için memnuniyetle hazır bulunurum."],
+["Für weitere Rückfragen stehe ich Ihnen gerne zur Verfügung.","Başka sorularınız için memnuniyetle hazır bulunurum."],
+["Für Rückfragen zu meiner Beschwerde stehe ich Ihnen gerne zur Verfügung.","Şikâyetimle ilgili sorularınız için memnuniyetle hazır bulunurum."],
+["Für Rückfragen zu meiner Bestellung stehe ich Ihnen gerne zur Verfügung.","Siparişimle ilgili sorularınız için memnuniyetle hazır bulunurum."],
+["Für Rückfragen zu diesem Vorfall stehe ich Ihnen gerne zur Verfügung.","Bu olayla ilgili sorularınız için memnuniyetle hazır bulunurum."],
+["Für Rückfragen können Sie mich jederzeit per E-Mail erreichen.","Sorularınız için bana her zaman e-posta yoluyla ulaşabilirsiniz."],
+["Für Rückfragen bin ich telefonisch erreichbar.","Sorularınız için telefonla ulaşılabilir durumdayım."],
+["Für Rückfragen sende ich Ihnen gern weitere Unterlagen zu.","Sorularınız için size memnuniyetle başka belgeler de gönderirim."],
+["Für Rückfragen kann ich Ihnen die Rechnung erneut zusenden.","Sorularınız için faturayı size yeniden gönderebilirim."],
+["Für Rückfragen stehe ich Ihnen selbstverständlich gerne zur Verfügung.","Sorularınız için elbette memnuniyetle hazır bulunurum."],
+]},
+{id:28,title:"deshalb / daher / aus diesem Grund",pattern:"… deshalb/daher/aus diesem Grund …",desc:"Sebep-sonuç bağlacı kalıpları",sentences:[
+["Die Lieferung war beschädigt, deshalb bitte ich um Ersatz.","Teslimat hasarlıydı, bu yüzden yenisini rica ediyorum."],
+["Ich habe keine Antwort erhalten, deshalb schreibe ich Ihnen erneut.","Cevap almadım, bu yüzden size tekrar yazıyorum."],
+["Die Rechnung ist fehlerhaft, deshalb bitte ich um Korrektur.","Fatura hatalı, bu yüzden düzeltme rica ediyorum."],
+["Das Produkt funktioniert nicht, daher bitte ich um Rückerstattung.","Ürün çalışmıyor, bu nedenle para iadesi rica ediyorum."],
+["Der Service war mangelhaft, daher erwarte ich eine Entschädigung.","Hizmet yetersizdi, bu nedenle telafi bekliyorum."],
+["Der Termin wurde kurzfristig abgesagt, daher bin ich sehr enttäuscht.","Randevu kısa süre önce iptal edildi, bu nedenle çok hayal kırıklığına uğradım."],
+["Das Zimmer war nicht sauber, aus diesem Grund möchte ich mich beschweren.","Oda temiz değildi, bu nedenle şikâyet etmek istiyorum."],
+["Die Ware kam zu spät an, aus diesem Grund sind mir zusätzliche Kosten entstanden.","Ürün geç geldi, bu nedenle bana ek masraflar çıktı."],
+["Die Informationen waren unklar, deshalb kam es zu Missverständnissen.","Bilgiler belirsizdi, bu yüzden yanlış anlaşılmalar oldu."],
+["Die Leistung wurde nicht erbracht, daher fordere ich den Betrag zurück.","Hizmet yerine getirilmedi, bu nedenle tutarı geri talep ediyorum."],
+]},
+{id:29,title:"dennoch / trotzdem",pattern:"… dennoch/trotzdem …",desc:"Zıtlık bağlacı — buna rağmen kalıpları",sentences:[
+["Ich habe mehrmals angerufen, dennoch habe ich keine Antwort erhalten.","Defalarca aradım, buna rağmen cevap alamadım."],
+["Die Lieferung wurde mir zugesichert, trotzdem kam sie nicht rechtzeitig an.","Teslimat bana garanti edildi, buna rağmen zamanında gelmedi."],
+["Ich habe alle Unterlagen geschickt, dennoch wurde mein Anliegen nicht bearbeitet.","Tüm belgeleri gönderdim, buna rağmen talebim işleme alınmadı."],
+["Das Produkt war teuer, trotzdem war die Qualität schlecht.","Ürün pahalıydı, buna rağmen kalite kötüydü."],
+["Ich habe den Fehler gemeldet, dennoch wurde nichts unternommen.","Hatayı bildirdim, buna rağmen hiçbir şey yapılmadı."],
+["Der Termin wurde bestätigt, trotzdem wurde ich nicht empfangen.","Randevu onaylandı, buna rağmen kabul edilmedim."],
+["Ich habe rechtzeitig bezahlt, dennoch wurde die Leistung nicht erbracht.","Zamanında ödeme yaptım, buna rağmen hizmet yerine getirilmedi."],
+["Mir wurde Hilfe versprochen, trotzdem hat sich niemand gemeldet.","Bana yardım sözü verildi, buna rağmen kimse iletişime geçmedi."],
+["Ich habe die Ware zurückgeschickt, dennoch wurde der Betrag nicht erstattet.","Ürünü geri gönderdim, buna rağmen tutar iade edilmedi."],
+["Ich habe mehrfach nachgefragt, trotzdem blieb meine Beschwerde unbeantwortet.","Defalarca sordum, buna rağmen şikâyetim cevapsız kaldı."],
+]},
+{id:30,title:"sowohl … als auch …",pattern:"Sowohl [A] als auch [B] …",desc:"Hem … hem de — ikili olumlu bağlaç",sentences:[
+["Sowohl die Lieferung als auch der Kundenservice waren enttäuschend.","Hem teslimat hem de müşteri hizmeti hayal kırıklığıydı."],
+["Sowohl das Produkt als auch die Verpackung waren beschädigt.","Hem ürün hem de paket hasarlıydı."],
+["Sowohl die Qualität als auch der Preis waren nicht akzeptabel.","Hem kalite hem de fiyat kabul edilebilir değildi."],
+["Sowohl die Rechnung als auch die Vertragsbedingungen waren unklar.","Hem fatura hem de sözleşme şartları belirsizdi."],
+["Sowohl der Termin als auch die Rückmeldung wurden verschoben.","Hem randevu hem de geri dönüş ertelendi."],
+["Sowohl die Beratung als auch die Bearbeitung meiner Beschwerde waren mangelhaft.","Hem danışmanlık hem de şikâyetimin işlenmesi yetersizdi."],
+["Sowohl die Unterkunft als auch der Service entsprachen nicht der Beschreibung.","Hem konaklama hem de hizmet açıklamaya uygun değildi."],
+["Sowohl die Wartezeit als auch die Kommunikation waren problematisch.","Hem bekleme süresi hem de iletişim problemliydi."],
+["Sowohl die Lieferung als auch die Rückerstattung haben zu lange gedauert.","Hem teslimat hem de para iadesi çok uzun sürdü."],
+["Sowohl die Sauberkeit als auch die Ausstattung des Zimmers waren unzureichend.","Hem temizlik hem de odanın donanımı yetersizdi."],
+]},
+{id:31,title:"weder … noch …",pattern:"Weder [A] noch [B] …",desc:"Ne … ne de — ikili olumsuz bağlaç",sentences:[
+["Weder die Lieferung noch der Kundenservice waren zufriedenstellend.","Ne teslimat ne de müşteri hizmeti memnun ediciydi."],
+["Weder die Qualität noch der Preis entsprachen meinen Erwartungen.","Ne kalite ne de fiyat beklentilerime uygundu."],
+["Weder telefonisch noch per E-Mail konnte ich jemanden erreichen.","Ne telefonla ne de e-posta ile kimseye ulaşabildim."],
+["Weder eine Entschuldigung noch eine Lösung wurde mir angeboten.","Bana ne bir özür ne de bir çözüm sunuldu."],
+["Weder die Rechnung noch die Erklärung waren nachvollziehbar.","Ne fatura ne de açıklama anlaşılırdı."],
+["Weder die Reparatur noch die Rückerstattung wurde durchgeführt.","Ne tamir ne de para iadesi yapıldı."],
+["Weder die Ware noch die Verpackung befanden sich in einem ordnungsgemäßen Zustand.","Ne ürün ne de paket düzgün durumdaydı."],
+["Weder der Termin noch die zugesagte Rückmeldung wurden eingehalten.","Ne randevuya ne de söz verilen geri dönüşe uyuldu."],
+["Weder die Unterkunft noch der Service entsprachen der Beschreibung.","Ne konaklama ne de hizmet açıklamaya uygundu."],
+["Weder meine Beschwerde noch meine Nachfrage wurden ernst genommen.","Ne şikâyetim ne de sorum ciddiye alındı."],
+]},
+{id:32,title:"nicht nur …, sondern auch …",pattern:"Nicht nur [A], sondern auch [B] …",desc:"Sadece … değil, aynı zamanda … — pekiştirme bağlacı",sentences:[
+["Nicht nur die Lieferung war verspätet, sondern auch die Ware war beschädigt.","Sadece teslimat gecikmedi, ürün de hasarlıydı."],
+["Nicht nur der Kundenservice war unfreundlich, sondern auch die Bearbeitung war sehr langsam.","Sadece müşteri hizmeti kaba değildi, işlem de çok yavaştı."],
+["Nicht nur die Rechnung war falsch, sondern auch die Erklärung war unklar.","Sadece fatura yanlış değildi, açıklama da belirsizdi."],
+["Nicht nur das Zimmer war schmutzig, sondern auch die Heizung funktionierte nicht.","Sadece oda kirli değildi, kalorifer de çalışmıyordu."],
+["Nicht nur der Termin wurde abgesagt, sondern auch eine Ersatzlösung wurde nicht angeboten.","Sadece randevu iptal edilmedi, alternatif çözüm de sunulmadı."],
+["Nicht nur die Qualität war schlecht, sondern auch der Preis war unangemessen hoch.","Sadece kalite kötü değildi, fiyat da uygunsuz derecede yüksekti."],
+["Nicht nur die Rückerstattung blieb aus, sondern auch meine E-Mails wurden ignoriert.","Sadece para iadesi yapılmadı, e-postalarım da görmezden gelindi."],
+["Nicht nur die Lieferung war unvollständig, sondern auch mehrere Teile waren beschädigt.","Sadece teslimat eksik değildi, birkaç parça da hasarlıydı."],
+["Nicht nur die Beratung war mangelhaft, sondern auch die Informationen waren widersprüchlich.","Sadece danışmanlık yetersiz değildi, bilgiler de çelişkiliydi."],
+["Nicht nur der Service war enttäuschend, sondern auch die Kommunikation war unprofessionell.","Sadece hizmet hayal kırıklığı değildi, iletişim de profesyonel değildi."],
+]},
+{id:33,title:"Ich bin überzeugt, dass … / Ich bin der Meinung, dass …",pattern:"Ich bin überzeugt/der Meinung, dass [CÜMLE].",desc:"Kanaatini ifade etme kalıpları",sentences:[
+["Ich bin überzeugt, dass eine schnelle Lösung möglich ist.","Hızlı bir çözümün mümkün olduğuna ikna olmuş durumdayım."],
+["Ich bin überzeugt, dass Ihnen an einer fairen Lösung gelegen ist.","Adil bir çözümle ilgilendiğinize ikna olmuş durumdayım."],
+["Ich bin überzeugt, dass dieser Fehler korrigiert werden kann.","Bu hatanın düzeltilebileceğine ikna olmuş durumdayım."],
+["Ich bin überzeugt, dass eine Rückerstattung in diesem Fall gerechtfertigt ist.","Bu durumda para iadesinin haklı olduğuna ikna olmuş durumdayım."],
+["Ich bin überzeugt, dass meine Beschwerde berechtigt ist.","Şikâyetimin haklı olduğuna ikna olmuş durumdayım."],
+["Ich bin der Meinung, dass die Rechnung fehlerhaft ist.","Faturanın hatalı olduğu kanısındayım."],
+["Ich bin der Meinung, dass die Qualität nicht dem Preis entspricht.","Kalitenin fiyata uygun olmadığı kanısındayım."],
+["Ich bin der Meinung, dass die Lieferung nicht ordnungsgemäß durchgeführt wurde.","Teslimatın usulüne uygun yapılmadığı kanısındayım."],
+["Ich bin der Meinung, dass eine Entschädigung angemessen wäre.","Bir tazminatın uygun olacağı kanısındayım."],
+["Ich bin der Meinung, dass dieses Vorgehen nicht akzeptabel ist.","Bu yöntemin kabul edilemez olduğu kanısındayım."],
+]},
+{id:34,title:"Es ist unverständlich, dass … / Es ist nicht nachvollziehbar, dass …",pattern:"Es ist unverständlich/nicht nachvollziehbar, dass [CÜMLE].",desc:"Anlaşılmazlık ifade etme kalıpları",sentences:[
+["Es ist unverständlich, dass meine Beschwerde ignoriert wurde.","Şikâyetimin görmezden gelinmesi anlaşılmaz bir durumdur."],
+["Es ist unverständlich, dass niemand auf meine E-Mails geantwortet hat.","Kimsenin e-postalarıma cevap vermemiş olması anlaşılmaz bir durumdur."],
+["Es ist unverständlich, dass der Fehler trotz meines Hinweises nicht korrigiert wurde.","Hatanın uyarıma rağmen düzeltilmemiş olması anlaşılmaz bir durumdur."],
+["Es ist unverständlich, dass die Rückerstattung so lange dauert.","Para iadesinin bu kadar uzun sürmesi anlaşılmaz bir durumdur."],
+["Es ist unverständlich, dass ich keine schriftliche Bestätigung erhalten habe.","Yazılı onay almamış olmam anlaşılmaz bir durumdur."],
+["Es ist nicht nachvollziehbar, dass die Rechnung nicht korrigiert wurde.","Faturanın düzeltilmemiş olması anlaşılır değildir."],
+["Es ist nicht nachvollziehbar, dass niemand erreichbar war.","Kimseye ulaşılamaması anlaşılır değildir."],
+["Es ist nicht nachvollziehbar, dass der Termin ohne Information verschoben wurde.","Randevunun bilgi verilmeden ertelenmesi anlaşılır değildir."],
+["Es ist nicht nachvollziehbar, dass die Ware in beschädigtem Zustand geliefert wurde.","Ürünün hasarlı durumda teslim edilmiş olması anlaşılır değildir."],
+["Es ist nicht nachvollziehbar, dass trotz meiner Zahlung keine Leistung erbracht wurde.","Ödeme yapmama rağmen hizmet yerine getirilmemiş olması anlaşılır değildir."],
+]},
+{id:35,title:"Ich sehe mich gezwungen, …",pattern:"Ich sehe mich gezwungen, [EYLEM].",desc:"Zorunda kalmak ifadesi — resmi uyarı",sentences:[
+["Ich sehe mich gezwungen, weitere Schritte einzuleiten.","Başka adımlar atmak zorunda kaldığımı görüyorum."],
+["Ich sehe mich gezwungen, rechtliche Schritte einzuleiten.","Hukuki adımlar atmak zorunda kaldığımı görüyorum."],
+["Ich sehe mich gezwungen, mich an die zuständige Behörde zu wenden.","Yetkili kuruma başvurmak zorunda kaldığımı görüyorum."],
+["Ich sehe mich gezwungen, die Angelegenheit zu eskalieren.","Konuyu üst mercilere taşımak zorunda kaldığımı görüyorum."],
+["Ich sehe mich gezwungen, den Vertrag zu kündigen.","Sözleşmeyi feshetmek zorunda kaldığımı görüyorum."],
+["Ich sehe mich gezwungen, eine offizielle Beschwerde einzureichen.","Resmî bir şikâyet sunmak zorunda kaldığımı görüyorum."],
+["Ich sehe mich gezwungen, die Zahlung zurückzufordern.","Ödemeyi geri talep etmek zorunda kaldığımı görüyorum."],
+["Ich sehe mich gezwungen, externe Hilfe in Anspruch zu nehmen.","Dış yardım almak zorunda kaldığımı görüyorum."],
+["Ich sehe mich gezwungen, die Situation öffentlich zu machen.","Durumu kamuoyuyla paylaşmak zorunda kaldığımı görüyorum."],
+["Ich sehe mich gezwungen, auf eine sofortige Antwort zu bestehen.","Derhal cevap talep etmek zorunda kaldığımı görüyorum."],
+]},
+{id:36,title:"Ich weise darauf hin, dass …",pattern:"Ich weise darauf hin, dass [CÜMLE].",desc:"Dikkat çekme / uyarı kalıbı",sentences:[
+["Ich weise darauf hin, dass die Frist am 30. Mai abläuft.","Son tarihin 30 Mayıs'ta dolduğuna dikkat çekiyorum."],
+["Ich weise darauf hin, dass ich bereits zweimal geschrieben habe.","Daha önce iki kez yazmış olduğuma dikkat çekiyorum."],
+["Ich weise darauf hin, dass der Vertrag eine Garantiepflicht enthält.","Sözleşmenin garanti yükümlülüğü içerdiğine dikkat çekiyorum."],
+["Ich weise darauf hin, dass der Fehler auf Ihrer Seite liegt.","Hatanın sizin tarafınızda olduğuna dikkat çekiyorum."],
+["Ich weise darauf hin, dass ich alle Belege aufbewahrt habe.","Tüm belgeleri sakladığıma dikkat çekiyorum."],
+["Ich weise darauf hin, dass mir ein Schaden entstanden ist.","Bana zarar geldiğine dikkat çekiyorum."],
+["Ich weise darauf hin, dass dies bereits das zweite fehlerhafte Produkt ist.","Bunun zaten ikinci hatalı ürün olduğuna dikkat çekiyorum."],
+["Ich weise darauf hin, dass eine Rückerstattung laut Vertrag vorgesehen ist.","Sözleşmeye göre para iadesi öngörüldüğüne dikkat çekiyorum."],
+["Ich weise darauf hin, dass ich das Produkt ordnungsgemäß zurückgeschickt habe.","Ürünü usulüne uygun geri gönderdiğime dikkat çekiyorum."],
+["Ich weise darauf hin, dass meine Anfrage seit drei Wochen unbeantwortet ist.","Talebimin üç haftadır cevapsız kaldığına dikkat çekiyorum."],
+]},
+{id:37,title:"Ich behalte mir vor, …",pattern:"Ich behalte mir vor, [EYLEM].",desc:"Hakkını saklı tutma kalıbı — güçlü resmi dil",sentences:[
+["Ich behalte mir vor, rechtliche Schritte einzuleiten.","Hukuki adım atma hakkımı saklı tutuyorum."],
+["Ich behalte mir vor, weitere Maßnahmen zu ergreifen.","Başka önlemler alma hakkımı saklı tutuyorum."],
+["Ich behalte mir vor, Schadensersatz zu fordern.","Tazminat talep etme hakkımı saklı tutuyorum."],
+["Ich behalte mir vor, mich an die zuständige Behörde zu wenden.","Yetkili kuruma başvurma hakkımı saklı tutuyorum."],
+["Ich behalte mir vor, den Vertrag zu kündigen.","Sözleşmeyi feshetme hakkımı saklı tutuyorum."],
+["Ich behalte mir vor, eine offizielle Beschwerde einzureichen.","Resmî şikâyet sunma hakkımı saklı tutuyorum."],
+["Ich behalte mir vor, den Fall an einen Anwalt zu übergeben.","Davayı avukata devretme hakkımı saklı tutuyorum."],
+["Ich behalte mir vor, die Angelegenheit öffentlich zu machen.","Konuyu kamuoyuna açıklama hakkımı saklı tutuyorum."],
+["Ich behalte mir vor, alle Kosten zurückzufordern.","Tüm masrafları geri talep etme hakkımı saklı tutuyorum."],
+["Ich behalte mir vor, meine Ansprüche gerichtlich geltend zu machen.","Haklarımı mahkeme yoluyla talep etme hakkımı saklı tutuyorum."],
+]},
+{id:38,title:"Karışık uzun B2/C1 cümleler",pattern:"Karmaşık yapılar — sınav ve resmi yazışma düzeyi",desc:"Çok cümleli, bağlaçlı yüksek puan kalıpları",sentences:[
+["Obwohl ich den Kundenservice mehrmals kontaktiert habe, habe ich bis heute weder eine Antwort noch eine Lösung erhalten.","Müşteri hizmetleriyle defalarca iletişime geçmeme rağmen bugüne kadar ne cevap ne de çözüm aldım."],
+["Da die Ware beschädigt angekommen ist und außerdem wichtige Teile fehlten, bitte ich Sie um eine schnelle Ersatzlieferung.","Ürün hasarlı geldiği ve ayrıca önemli parçalar eksik olduğu için hızlı bir yeni teslimat rica ediyorum."],
+["Die Lieferung war nicht nur verspätet, sondern entsprach auch nicht der Beschreibung auf Ihrer Webseite.","Teslimat sadece gecikmedi, aynı zamanda web sitenizdeki açıklamaya da uygun değildi."],
+["Trotz meiner rechtzeitigen Zahlung wurde die vereinbarte Leistung nicht erbracht, weshalb ich eine Rückerstattung erwarte.","Zamanında ödeme yapmama rağmen kararlaştırılan hizmet yerine getirilmedi; bu nedenle para iadesi bekliyorum."],
+["Sowohl die mangelhafte Qualität als auch die fehlende Rückmeldung haben bei mir einen sehr schlechten Eindruck hinterlassen.","Hem yetersiz kalite hem de geri dönüş yapılmaması bende çok kötü bir izlenim bıraktı."],
+["Sollte ich bis zum genannten Datum keine Rückmeldung erhalten, sehe ich mich gezwungen, weitere Schritte einzuleiten.","Belirtilen tarihe kadar geri dönüş almazsam, başka adımlar atmak zorunda kalacağım."],
+["Hinzu kommt, dass mir durch die Verzögerung zusätzliche Kosten entstanden sind, die ich nicht zu verantworten habe.","Buna ek olarak, gecikme yüzünden benim sorumlu olmadığım ek masraflar çıktı."],
+["Ich gehe davon aus, dass Sie meine Beschwerde sorgfältig prüfen und mir zeitnah eine faire Lösung anbieten.","Şikâyetimi dikkatlice inceleyeceğinizi ve bana kısa sürede adil bir çözüm sunacağınızı varsayıyorum."],
+["Falls keine zufriedenstellende Lösung gefunden wird, behalte ich mir vor, rechtliche Schritte einzuleiten.","Memnun edici bir çözüm bulunmazsa, hukuki adım atma hakkımı saklı tutuyorum."],
+["Ich weise darauf hin, dass ich alle relevanten Belege aufbewahrt habe und diese bei Bedarf vorlegen kann.","Tüm ilgili belgeleri sakladığıma ve gerektiğinde sunabileceğime dikkat çekiyorum."],
+["Es ist nicht nachvollziehbar, dass trotz mehrmaliger Nachfrage weder eine Antwort noch eine Lösung angeboten wurde.","Defalarca sormama rağmen ne cevap ne de çözüm sunulmuş olması anlaşılır değildir."],
+["Ich bin der Meinung, dass die fehlerhafte Rechnung unverzüglich korrigiert und der Differenzbetrag erstattet werden muss.","Hatalı faturanın derhal düzeltilmesi ve fark tutarının iade edilmesi gerektiği kanısındayım."],
+["Weder meine telefonischen Nachfragen noch meine schriftlichen Beschwerden wurden bisher ernst genommen.","Ne telefonla yaptığım sorular ne de yazılı şikâyetlerim şimdiye kadar ciddiye alındı."],
+["Nicht nur wurde die Ware beschädigt geliefert, sondern auch der Kundenservice reagierte auf meine Beschwerde äußerst unfreundlich.","Sadece ürün hasarlı teslim edilmedi, müşteri hizmetleri de şikâyetime son derece kaba tepki verdi."],
+["Da ich trotz mehrmaliger Aufforderung keine Rückmeldung erhalten habe, sehe ich mich nun gezwungen, weitere Maßnahmen zu ergreifen.","Defalarca talep etmeme rağmen geri dönüş almadığım için şimdi başka önlemler almak zorunda kaldığımı görüyorum."],
+]}
+];
+
+let curSec=0,curMode='list',cardIdx=0,cardFlipped=false,shuffleOn=false;
+let quizIdx=0,trIdx=0,blkIdx=0;
+let score={c:0,w:0,t:0};
+let order=[];
+
+function getSents(){
+  const s=sections[curSec].sentences;
+  return shuffleOn?order.map(i=>s[i]):[...s];
+}
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function resetOrder(){order=sections[curSec].sentences.map((_,i)=>i);if(shuffleOn)order=shuffle(order);}
+
+function buildSidebar(){
+  const nav=document.getElementById('sidebar');
+  nav.innerHTML='<div class="sidebar-group">KALIP LİSTESİ</div>';
+  sections.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.className='sidebar-btn'+(i===curSec?' active':'');
+    b.innerHTML=`<span class="num">${s.id}</span>${s.title.length>36?s.title.slice(0,34)+'…':s.title}`;
+    b.onclick=()=>{curSec=i;resetOrder();cardIdx=0;quizIdx=0;trIdx=0;blkIdx=0;cardFlipped=false;buildSidebar();render();};
+    nav.appendChild(b);
+  });
+}
+
+function setMode(m,btn){
+  curMode=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  cardIdx=0;cardFlipped=false;quizIdx=0;trIdx=0;blkIdx=0;
+  resetOrder();render();
+}
+
+function render(){
+  const area=document.getElementById('exercise-area');
+  const sec=sections[curSec];
+  const sents=getSents();
+  let h=`<div class="section-header">
+    <div class="section-pattern">${sec.pattern}</div>
+    <h2 class="section-title">${sec.title}</h2>
+    <div class="section-desc">${sec.desc} — <strong>${sents.length}</strong> cümle</div>
+  </div>
+  <div class="prog-bar-wrap"><div class="prog-bar" style="width:${(curSec+1)/sections.length*100}%"></div></div>
+  <div class="toggle-row">
+    <button class="toggle${shuffleOn?' on':''}" onclick="toggleShuffle()"></button>
+    <span class="toggle-label">KARIŞTIR</span>
+  </div>`;
+  if(curMode==='list') h+=renderList(sents);
+  else if(curMode==='cards') h+=renderCards(sents);
+  else if(curMode==='blank') h+=renderBlank(sents);
+  else if(curMode==='translate') h+=renderTranslate(sents);
+  else if(curMode==='quiz') h+=renderQuiz(sents);
+  area.innerHTML=h;
+  attachKeys();
+}
+
+function toggleShuffle(){shuffleOn=!shuffleOn;resetOrder();cardIdx=0;quizIdx=0;trIdx=0;blkIdx=0;render();}
+
+function renderList(sents){
+  let h='<div class="sentence-list">';
+  sents.forEach((s,i)=>{
+    const de=s[0].replace(/(Ich möchte|Das Problem|Ich bitte|Ich wende|Hiermit|Ich schreibe|Leider|Obwohl|Außerdem|Hinzu kommt|Besonders ärgerlich|Trotz|Dadurch|Ich halte|Ich fordere|Ich erwarte|Sollte|Falls|Ich hoffe|Ich gehe|Sowohl|Weder|Nicht nur|deshalb|daher|dennoch|trotzdem|Vielen Dank|Für Rückfragen|Ich bin|Es ist|Ich sehe|Ich weise|Ich behalte)/g,'<span class="hl">$1</span>');
+    h+=`<div class="sentence-row"><span class="row-num">${i+1}</span><span class="row-de">${de}</span><span class="row-tr">${s[1]}</span></div>`;
+  });
+  return h+'</div>';
+}
+
+function renderCards(sents){
+  const s=sents[cardIdx];
+  return `<div class="flashcard${cardFlipped?' flipped':''}" id="fc" onclick="flipCard()">
+    <div class="card-front">${s[1]}</div>
+    <div class="card-back"><div class="card-back-de">${s[0]}</div></div>
+    <span class="flip-hint">${cardFlipped?'ALMANCA ✓':'TIKLA → ALMANCASINI GÖR'}</span>
+  </div>
+  <div class="card-nav">
+    <button class="nav-btn" onclick="prevCard()">← GERİ</button>
+    <span class="card-progress">${cardIdx+1} / ${sents.length}</span>
+    <button class="nav-btn" onclick="nextCard()">İLERİ →</button>
+  </div>`;
+}
+function flipCard(){cardFlipped=!cardFlipped;render();}
+function nextCard(){const s=getSents();cardIdx=(cardIdx+1)%s.length;cardFlipped=false;render();}
+function prevCard(){const s=getSents();cardIdx=(cardIdx-1+s.length)%s.length;cardFlipped=false;render();}
+
+function renderBlank(sents){
+  const s=sents[blkIdx];
+  const words=s[0].split(' ');
+  const keys=words.filter(w=>w.replace(/[.,!?]/g,'').length>5);
+  const toBlank=keys.slice(0,Math.min(3,Math.ceil(keys.length/2)));
+  let displayed=s[0];
+  toBlank.forEach((w,i)=>{
+    const clean=w.replace(/[.,!?]$/,'');
+    if(displayed.includes(clean)&&clean.length>4){
+      displayed=displayed.replace(clean,`<input class="blank-input" id="bl${i}" data-answer="${clean}" placeholder="___" size="${Math.max(10,clean.length)}">`);
+    }
+  });
+  return `<div class="exercise-card">
+    <div class="ex-label">BOŞLUK DOLDUR — ${blkIdx+1} / ${sents.length}</div>
+    <div class="ex-sentence">${displayed}</div>
+    <div class="ex-hint">Türkçe: <span>${s[1]}</span></div>
+    <div class="ex-controls">
+      <button class="check-btn" onclick="checkBlanks()">KONTROL ET</button>
+      <button class="show-answer-btn" onclick="showBlankAns()">CEVABI GÖR</button>
+    </div>
+    <div class="feedback" id="blfb"></div>
+    <div class="full-answer" id="blans">✓ ${s[0]}</div>
+  </div>
+  <div class="card-nav">
+    <button class="nav-btn" onclick="prevBlk()">← GERİ</button>
+    <span class="card-progress">${blkIdx+1} / ${sents.length}</span>
+    <button class="nav-btn" onclick="nextBlk()">İLERİ →</button>
+  </div>`;
+}
+function checkBlanks(){
+  let all=true,cor=0,tot=0;
+  document.querySelectorAll('.blank-input').forEach(inp=>{
+    tot++;
+    const ans=inp.dataset.answer.toLowerCase().replace(/[.,!?]$/,'').trim();
+    const val=inp.value.toLowerCase().replace(/[.,!?]$/,'').trim();
+    if(val===ans){inp.classList.add('correct');inp.classList.remove('wrong');cor++;}
+    else{inp.classList.add('wrong');inp.classList.remove('correct');all=false;}
+  });
+  const fb=document.getElementById('blfb');
+  fb.className='feedback show '+(all?'ok':'err');
+  fb.textContent=all?'✓ Tüm boşluklar doğru!':'✗ '+cor+'/'+tot+' doğru. Tekrar dene.';
+  if(all)score.c++;else score.w++;score.t++;updateStats();
+}
+function showBlankAns(){
+  document.getElementById('blans').style.display='block';
+  document.querySelectorAll('.blank-input').forEach(inp=>{inp.value=inp.dataset.answer;inp.classList.add('correct');});
+}
+function nextBlk(){const s=getSents();blkIdx=(blkIdx+1)%s.length;render();}
+function prevBlk(){const s=getSents();blkIdx=(blkIdx-1+s.length)%s.length;render();}
+
+function renderTranslate(sents){
+  const s=sents[trIdx];
+  return `<div class="translate-card">
+    <div class="tr-prompt">TÜRKÇE → ALMANCAYA ÇEVİR</div>
+    <div class="tr-sentence">${s[1]}</div>
+    <textarea class="tr-input" id="tri" placeholder="Almanca cümlenizi yazın…" rows="3"></textarea>
+    <div class="ex-controls"><button class="check-btn" onclick="showTrAns()">CEVABI GÖR</button></div>
+    <div class="tr-answer" id="tra">✓ ${s[0]}</div>
+  </div>
+  <div class="card-nav">
+    <button class="nav-btn" onclick="prevTr()">← GERİ</button>
+    <span class="card-progress">${trIdx+1} / ${sents.length}</span>
+    <button class="nav-btn" onclick="nextTr()">İLERİ →</button>
+  </div>`;
+}
+function showTrAns(){document.getElementById('tra').classList.add('show');}
+function nextTr(){const s=getSents();trIdx=(trIdx+1)%s.length;render();}
+function prevTr(){const s=getSents();trIdx=(trIdx-1+s.length)%s.length;render();}
+
+function renderQuiz(sents){
+  const s=sents[quizIdx];
+  const cor=s[0];
+  const others=sents.filter((_,i)=>i!==quizIdx).map(x=>x[0]);
+  const opts=shuffle([cor,...shuffle(others).slice(0,3)]);
+  const esc=str=>str.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  let btns=opts.map((o,i)=>`<button class="quiz-opt" id="qo${i}" onclick="ansQuiz(${i},'${esc(o)}','${esc(cor)}')">${o}</button>`).join('');
+  return `<div class="quiz-card">
+    <div class="ex-label">QUİZ — ${quizIdx+1} / ${sents.length}</div>
+    <div class="quiz-q">🇹🇷 ${s[1]}</div>
+    <div class="quiz-options">${btns}</div>
+    <div class="quiz-next" id="qnext"><button class="nav-btn" onclick="nextQuiz()">SONRAKI →</button></div>
+  </div>`;
+}
+function ansQuiz(idx,chosen,correct){
+  document.querySelectorAll('.quiz-opt').forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===correct)b.classList.add('correct-opt');
+  });
+  const btn=document.getElementById('qo'+idx);
+  if(chosen===correct){score.c++;}else{btn.classList.add('wrong-opt');score.w++;}
+  score.t++;updateStats();
+  document.getElementById('qnext').classList.add('show');
+}
+function nextQuiz(){const s=getSents();quizIdx=(quizIdx+1)%s.length;render();}
+
+function updateStats(){
+  document.getElementById('s-correct').textContent=score.c;
+  document.getElementById('s-wrong').textContent=score.w;
+  document.getElementById('s-total').textContent=score.t;
+}
+function attachKeys(){
+  document.onkeydown=e=>{
+    if(curMode==='cards'){
+      if(e.key==='ArrowRight')nextCard();
+      if(e.key==='ArrowLeft')prevCard();
+      if(e.key===' '){e.preventDefault();flipCard();}
+    }
+  };
+}
+
+resetOrder();buildSidebar();render();
+</script>
+</body>
+</html>
